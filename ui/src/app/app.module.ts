@@ -11,6 +11,9 @@ import { HomeComponent } from './components/home/home.component';
 import { HeaderComponent } from './components/header/header.component';
 import { UserComponent } from './components/user/user.component';
 import { UsernotfoundComponent } from './components/usernotfound/usernotfound.component';
+import { DataOwnerComponent } from './components/dashboard/data-owner/data-owner.component';
+import { DataRequesterComponent } from './components/dashboard/data-requester/data-requester.component';
+import { SuperAdminComponent } from './components/dashboard/super-admin/super-admin.component';
 
 @NgModule({
   declarations: [
@@ -19,6 +22,9 @@ import { UsernotfoundComponent } from './components/usernotfound/usernotfound.co
     HeaderComponent,
     UserComponent,
     UsernotfoundComponent,
+    DataOwnerComponent,
+    DataRequesterComponent,
+    SuperAdminComponent,
   ],
   imports: [
     BrowserModule,
