@@ -1,0 +1,33 @@
+<div class="flex justify-center items-center min-h-screen">
+  <div class="bg-zinc-500 p-2 mx-6 rounded-2xl">
+    <div class="flex flex-col md:flex-row rounded-l-xl">
+      <!-- Image -->
+      <img
+        src="../../../assets/images/image2.jpg"
+        alt="Connect image"
+        class="object-fit rounded-xl h-80 w-64 md:h-64 md:rounded-l-xl md:rounded-r-none transform hover:scale-105 hover:rounded-xl duration-200"
+      />
+
+      <!-- Content -->
+      <div class="p-6 md:p-12">
+        <p
+          class="font-serif text-3xl font-medium text-center text-white md:text-left"
+        >
+          Welcome to MyApp
+        </p>
+
+        <p
+          class="max-w-xs my-4 text-lg leading-5 tracking-wide text-center text-white md:text-left"
+        >
+          Join the network by clicking on connect button
+        </p>
+        <button
+          class="px-5 py-3 text-base rounded-md text-zinc-800 bg-lime-500 hover:bg-lime-700 hover:text-white duration-500"
+          (click)="onConnect()"
+        >
+          Connect
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
