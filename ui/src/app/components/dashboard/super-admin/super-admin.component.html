@@ -1,1 +1,100 @@
-<p>super-admin works!</p>
+<div>
+  <div class="flex justify-between items-center w-full border-b-2">
+    <div class="w-1/3 userheading">
+      <h2>Welcome: User</h2>
+      <p>Approval status: false</p>
+    </div>
+    <nav
+      class="w-2/3 py-2 bg-gray-400 rounded-sm shadow-lg navbar navbar-expand-lg navbar-light items-center justify-between"
+    >
+      <ul
+        class="navbar-nav flex justify-center items-center text-white text-lg"
+      >
+        <li
+          class="nav-item p-2 cursor-pointer px-5 py-3 mr-4 text-base rounded-md text-zinc-800 bg-lime-500 hover:bg-lime-700 hover:text-white duration-500"
+        >
+          Approval Requests
+        </li>
+        <li
+          class="nav-item p-2 cursor-pointer px-5 py-3 text-base rounded-md text-zinc-800 bg-lime-500 hover:bg-lime-700 hover:text-white duration-500"
+        >
+          Update Approval
+        </li>
+      </ul>
+    </nav>
+  </div>
+  <div class="mt-8">
+    <mat-form-field appearance="standard">
+      <mat-label>Filter</mat-label>
+      <input
+        matInput
+        (keyup)="applyFilter($event)"
+        placeholder="Ex. ium"
+        #input
+      />
+    </mat-form-field>
+    <table mat-table [dataSource]="dataSource" class="mat-elevation-z8 w-full">
+      <!-- Position Column -->
+      <ng-container matColumnDef="address">
+        <th mat-header-cell *matHeaderCellDef class="text-zinc-800">Address</th>
+        <td mat-cell *matCellDef="let element">{{ element.ownerAddress }}</td>
+      </ng-container>
+
+      <!-- Name Column -->
+      <ng-container matColumnDef="profession">
+        <th mat-header-cell *matHeaderCellDef class="text-zinc-800">
+          Profession
+        </th>
+        <td mat-cell *matCellDef="let element">{{ element.profession }}</td>
+      </ng-container>
+
+      <!-- Weight Column -->
+      <ng-container matColumnDef="location">
+        <th mat-header-cell *matHeaderCellDef class="text-zinc-800">
+          Location
+        </th>
+        <td mat-cell *matCellDef="let element">{{ element.location }}</td>
+      </ng-container>
+
+      <!-- Symbol Column -->
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef class="text-zinc-800">Actions</th>
+        <td mat-cell *matCellDef="let element">
+          <mat-icon
+            class="text-green-600 font-semibold cursor-pointer"
+            (click)="approve(element.ownerAddress)"
+            >done</mat-icon
+          >
+          <mat-icon class="text-red-600 font-semibold cursor-pointer"
+            >close</mat-icon
+          >
+        </td>
+      </ng-container>
+      <tr
+        mat-header-row
+        *matHeaderRowDef="displayedColumns"
+        class="bg-lime-400"
+      ></tr>
+      <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+      <!-- Row shown when there is no matching data. -->
+      <tr class="mat-row" *matNoDataRow>
+        <td class="mat-cell" colspan="4">
+          No data matching the filter "{{ input.value }}"
+        </td>
+      </tr>
+    </table>
+    <!-- <ul class="flex flex-col border-2 shadow-lg">
+      <li class="flex gap-64 bg-lime-500 py-4 justify-start">
+        <span>Address</span>
+        <span>Profession</span>
+        <span>Location</span>
+        <span>Actions</span>
+      </li>
+      <li class="flex gap-64" *ngFor="let owner of owners">
+        <span>{{ owner.ownerAddress }}</span>
+        <span>{{ owner.profession }}</span>
+        <span>{{ owner.location }}</span>
+      </li>
+    </ul> -->
+  </div>
+</div>

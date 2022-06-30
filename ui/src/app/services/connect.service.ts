@@ -7,6 +7,10 @@ import {
 
 import { ethers } from 'ethers';
 
+import * as CryptoJS from 'crypto-js';
+
+//import {} from "ascii85";
+import { encrypt } from '@metamask/eth-sig-util';
 //import { createPath } from '../abis/copy.abis';
 import { AlertsService } from './alerts.service';
 import Users from '../abis/Users.json';
@@ -19,9 +23,10 @@ export class ConnectService {
   ethereum = window.ethereum;
   durationInSeconds: Number = 5;
 
-  userContractAddress = '0xf8422c7472B0DF40f1d23658482331BF3D5856a8';
+  userContractAddress = '0xB60e5b1c7FE6192701746EB1C539b6Ee98772b8c';
   userContract: any;
 
+  encryptionKey: any;
   constructor(
     private _snackBar: MatSnackBar,
     private alertService: AlertsService
@@ -35,7 +40,8 @@ export class ConnectService {
       Users.abi
     );
 
-    this.getOwner();
+    //this.getEncryptionkey();
+    this.encryptData();
   }
 
   // openSnackBar(message: any) {
@@ -73,6 +79,7 @@ export class ConnectService {
       const accounts = await window.ethereum.request({
         method: 'eth_requestAccounts',
       });
+      console.log('sjhfd');
       return accounts[0];
       //let users = this.getAllUsers();
     } catch (error: any) {
@@ -108,7 +115,7 @@ export class ConnectService {
     let structuredUsers = users.map((user: any) => ({
       address: user.userAddress,
       role: user.role,
-      approved: user.approved,
+      //approved: user.approved,
     }));
 
     return structuredUsers;
@@ -147,11 +154,111 @@ export class ConnectService {
       };
       console.log(structuredOwner);
     } catch (error: any) {
+      console.log(error);
       this.alertService.alertErrorMessage(error.data.message);
     }
   }
 
+  async getOwnerApprovalRequests() {
+    let usercontract = await this.userContract;
+    let nevents = await usercontract.queryFilter('NewOwnerCreated');
+    let structuredEvents = nevents.map((event: any) => {
+      let [ownerAddress, profession, location, approved] = [...event.args];
+      return {
+        ownerAddress: ownerAddress,
+        profession: this.bytes32ToString(profession),
+        location: this.bytes32ToString(location),
+      };
+    });
+    return structuredEvents;
+  }
+
   //async addRequester(address: string);
+  async getEncryptionkey() {
+    let user = await this.getConnectedUser();
+    console.log(user);
+    const keyb64 = (await this.ethereum.request({
+      method: 'eth_getEncryptionPublicKey',
+      params: [user],
+    })) as string;
+    const publicKey = Buffer.from(keyb64, 'base64');
+    this.encryptionKey = publicKey;
+    console.log(publicKey);
+  }
+
+  async encryptData() {
+    let data1 = 'VenkatPravas';
+    let data2 = 'lakshmi';
+    let key = 'password';
+
+    // let user = await this.getConnectedUser();
+    // console.log(user);
+
+    let cp1 = CryptoJS.AES.encrypt(data1, key).toString();
+    let cp2 = CryptoJS.AES.encrypt(data2, key).toString();
+
+    console.log(cp1);
+    let buffcp1 = Buffer.from(cp1, 'utf-8');
+
+    //this.decryption(cp1, cp2);
+
+    const keyb64 = (await this.ethereum.request({
+      method: 'eth_getEncryptionPublicKey',
+      params: ['0x7d84b6e05C80B5791b0072631087EC63B3168e4C'],
+    })) as string;
+    const publicKey = Buffer.from(keyb64, 'base64');
+    this.encryptionKey = publicKey;
+
+    const enc = encrypt({
+      publicKey: this.encryptionKey.toString('base64'),
+      data: cp1,
+      version: 'x25519-xsalsa20-poly1305',
+    });
+
+    const buf = Buffer.concat([
+      Buffer.from(enc.ephemPublicKey, 'base64'),
+      Buffer.from(enc.nonce, 'base64'),
+      Buffer.from(enc.ciphertext, 'base64'),
+    ]);
+
+    console.log(enc);
+    console.log(buf);
+
+    this.decryptData2(buf);
+  }
+
+  async decryptData2(data: Buffer) {
+    const structuredData = {
+      version: 'x25519-xsalsa20-poly1305',
+      ephemPublicKey: data.slice(0, 32).toString('base64'),
+      nonce: data.slice(32, 56).toString('base64'),
+      ciphertext: data.slice(56).toString('base64'),
+    };
+
+    const ct = `0x${Buffer.from(
+      JSON.stringify(structuredData),
+      'utf8'
+    ).toString('hex')}`;
+
+    const decrypt = await window.ethereum.request({
+      method: 'eth_decrypt',
+      params: [ct, '0x7d84b6e05C80B5791b0072631087EC63B3168e4C'],
+    });
+
+    let bytes = CryptoJS.AES.decrypt(decrypt, 'password');
+    let originalText = bytes.toString(CryptoJS.enc.Utf8);
+    console.log(decrypt, originalText);
+  }
+
+  async decryption(data1: string, data2: string) {
+    let key = 'password';
+    let bytes = CryptoJS.AES.decrypt(data1, key);
+    let bytes2 = CryptoJS.AES.decrypt(data2, key);
+    let originalText = bytes.toString(CryptoJS.enc.Utf8);
+    let originalText2 = bytes2.toString(CryptoJS.enc.Utf8);
+
+    console.log(originalText, originalText2);
+  }
 
   async disconnect() {
     try {

@@ -26,7 +26,7 @@ contract Users is Organisations {
     struct User {
         address userAddress;
         uint role;
-        bool approved;
+        //bool approved;
     }
 
     constructor(address orgcontractAddress) {
@@ -53,6 +53,37 @@ contract Users is Organisations {
     //     require(requesters);
     // }
 
+    // Events goes here
+    event NewOwnerCreated(
+        address ownerAddress,
+        bytes32 profession,
+        bytes32 location,
+        bool approved
+    );
+
+    event UpdateDataOwner(
+        address ownerAddress,
+        bytes32 profession,
+        bytes32 location,
+        bool approved
+    );
+
+    event NewRequesterCreated(
+        address requesterAddress,
+        bytes32 organisation,
+        bytes32 department,
+        bytes32 designation,
+        bool approved
+    );
+
+    event UpdateDataRequester(
+        address requesterAddress,
+        bytes32 organisation,
+        bytes32 department,
+        bytes32 designation,
+        bool approved
+    );
+
     //mapping owner address to owner struct
     mapping(address => Owner) owners;
     mapping(address => Requester) requesters;
@@ -60,21 +91,30 @@ contract Users is Organisations {
     // Function to add data owners
     function addDataOwner(address ownerAddress, bytes32 profession, bytes32 location) public isUserExists(ownerAddress) {
         owners[ownerAddress] = Owner(ownerAddress, profession, location, false);
-        allUsers.push(User(ownerAddress, 1, false));   
+        allUsers.push(User(ownerAddress, 1));
+        emit NewOwnerCreated(ownerAddress, profession, location, false);
     }
 
     function addDataRequester(address requesterAddress, bytes32 organisation, bytes32 department, bytes32 designation) public isUserExists(requesterAddress) {
         requesters[requesterAddress] = Requester(requesterAddress, organisation, department, designation, false);
-        allUsers.push(User(requesterAddress, 2, false));
+        allUsers.push(User(requesterAddress, 2));
         organisationInstance.addOrganisation(organisation, department, designation);
+        emit NewRequesterCreated(requesterAddress, organisation, department, designation, false);
     }
 
+    function updateDataOwner(address ownerAddress, bytes32 profession, bytes32 location) public {
+        require(owners[ownerAddress].ownerAddress == msg.sender, "Invalid user operation");
+        owners[ownerAddress] = Owner(ownerAddress, profession, location, false);
+        emit UpdateDataOwner(ownerAddress, profession, location, false);
+    }
 
-    function updateRequester(bytes32 organisation, bytes32 department, bytes32 designation) public {
-        requesters[msg.sender].organisation = organisation;
-        requesters[msg.sender].department = department;
-        requesters[msg.sender].designation = designation;
-        requesters[msg.sender].approved = false;
+    function updateDataRequester(address requesterAddress, bytes32 organisation, bytes32 department, bytes32 designation) public {
+        require(requesters[requesterAddress].requesterAddress == msg.sender, "Invalid user operation");
+        requesters[requesterAddress].organisation = organisation;
+        requesters[requesterAddress].department = department;
+        requesters[requesterAddress].designation = designation;
+        requesters[requesterAddress].approved = false;
+        emit UpdateDataRequester(requesterAddress, organisation, department, designation, false);
     }
 
     function getDataOwner(address ownerAddress) public view returns(Owner memory) {
@@ -85,8 +125,12 @@ contract Users is Organisations {
         return requesters[requesterAddress];
     }
 
-    function approveUser() public onlySuperAdmin(msg.sender) {
+    function approveOwner(address ownerAddress) public onlySuperAdmin(msg.sender) {
+        owners[ownerAddress].approved = true;
+    }
 
+    function approveRequester(address requesterAddress) public onlySuperAdmin(msg.sender) {
+        requesters[requesterAddress].approved = true;
     }
 
     function getAllUsers() public view returns(User[] memory) {

@@ -29,10 +29,11 @@ export class HomeComponent implements OnInit {
     let connecteduser = await this.connectService.getConnectedUser();
 
     let allusers = await this.connectService.getAllUsers();
-    // console.log(connecteduser);
-    console.log(allusers);
-    // let isExistingUser = allusers.find(
-    //   (user: any) => user.address === connecteduser
-    // );
+    let isExistingUser = allusers.find(
+      (user: any) => user.address.toLowerCase() === connecteduser
+    );
+    if (isExistingUser) {
+      this.router.navigate(['admin']);
+    }
   }
 }
