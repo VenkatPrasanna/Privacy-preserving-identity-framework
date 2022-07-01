@@ -14,6 +14,9 @@ import { UsernotfoundComponent } from './components/usernotfound/usernotfound.co
 import { DataOwnerComponent } from './components/dashboard/data-owner/data-owner.component';
 import { DataRequesterComponent } from './components/dashboard/data-requester/data-requester.component';
 import { SuperAdminComponent } from './components/dashboard/super-admin/super-admin.component';
+import { SidenavComponent } from './components/dashboard/sidenav/sidenav.component';
+import { DashboardComponent } from './components/dashboard/dashboard.component';
+import { ModifyDataComponent } from './components/dashboard/data-owner/modify-data/modify-data.component';
 
 @NgModule({
   declarations: [
@@ -25,6 +28,9 @@ import { SuperAdminComponent } from './components/dashboard/super-admin/super-ad
     DataOwnerComponent,
     DataRequesterComponent,
     SuperAdminComponent,
+    SidenavComponent,
+    DashboardComponent,
+    ModifyDataComponent,
   ],
   imports: [
     BrowserModule,

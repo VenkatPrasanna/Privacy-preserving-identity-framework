@@ -1,16 +1,16 @@
 import { Component, OnInit } from '@angular/core';
-import { ConnectService } from '../../services/connect.service';
+import { GenericService } from '../../services/generic.service';
 @Component({
   selector: 'app-usernotfound',
   templateUrl: './usernotfound.component.html',
   styleUrls: ['./usernotfound.component.css'],
 })
 export class UsernotfoundComponent implements OnInit {
-  constructor(public connectService: ConnectService) {}
+  constructor(public genericService: GenericService) {}
 
   ngOnInit(): void {}
 
   async onConnect() {
-    this.connectService.connectWallet();
+    this.genericService.connectWallet();
   }
 }

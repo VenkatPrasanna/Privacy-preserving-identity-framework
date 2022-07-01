@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
+import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { DataOwnerComponent } from './components/dashboard/data-owner/data-owner.component';
 import { DataRequesterComponent } from './components/dashboard/data-requester/data-requester.component';
 import { SuperAdminComponent } from './components/dashboard/super-admin/super-admin.component';
@@ -14,6 +15,10 @@ const routes: Routes = [
   { path: 'data-owner', component: DataOwnerComponent },
   { path: 'data-requester', component: DataRequesterComponent },
   { path: 'admin', component: SuperAdminComponent },
+  {
+    path: 'dashboard',
+    component: DashboardComponent,
+  },
 ];
 
 @NgModule({

@@ -1,12 +1,6 @@
-import { Component, EventEmitter, OnInit } from '@angular/core';
-import {
-  FormBuilder,
-  FormArray,
-  FormGroup,
-  Validators,
-  FormControl,
-} from '@angular/forms';
-import { MatTabChangeEvent } from '@angular/material/tabs';
+import { Component, OnInit } from '@angular/core';
+import { FormGroup, Validators, FormControl } from '@angular/forms';
+import { GenericService } from '../../services/generic.service';
 import { ConnectService } from '../../services/connect.service';
 
 export interface UserType {
@@ -29,7 +23,10 @@ export class UserComponent implements OnInit {
   requesterRegistrationForm: any;
   selectedUserType: any;
 
-  constructor(private connectService: ConnectService, public fb: FormBuilder) {}
+  constructor(
+    private genericService: GenericService,
+    private connectService: ConnectService
+  ) {}
 
   ngOnInit(): void {
     //this.connectService.isUserConnected();
@@ -59,7 +56,7 @@ export class UserComponent implements OnInit {
       let { profession, location } = this.ownerRegistrationForm.value;
       profession = this.stringToBytes32(profession);
       location = this.stringToBytes32(location);
-      let connecteduser = await this.connectService.getConnectedUser();
+      let connecteduser = await this.genericService.getConnectedUser();
       console.log(connecteduser, profession, location);
       let txn = await this.connectService.addOwner(
         connecteduser,

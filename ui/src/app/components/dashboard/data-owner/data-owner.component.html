@@ -1,1 +1,155 @@
-<p>data-owner works!</p>
+<mat-sidenav-container>
+  <mat-sidenav
+    class="w-48 bg-[#1939ab] text-white rounded-lg p-4 text-center"
+    mode="side"
+    opened
+  >
+    <button mat-button class="menu-button" (click)="updateView('profile')">
+      <mat-icon>person</mat-icon><span>Profile</span>
+    </button>
+    <button
+      mat-button
+      class="menu-button"
+      *ngIf="dataOwner.approved"
+      (click)="updateView('requests')"
+    >
+      <mat-icon>remove_red_eye</mat-icon><span>Requests</span>
+    </button>
+    <button
+      mat-button
+      class="menu-button"
+      *ngIf="dataOwner.approved"
+      (click)="updateView('dataset')"
+    >
+      <mat-icon>create_new_folder</mat-icon><span>Datasets</span>
+    </button>
+  </mat-sidenav>
+  <mat-sidenav-content>
+    <div
+      class="flex flex-col ml-5 justify-start p-12 rounded-lg mat-elevation-z4 usercomponent"
+    >
+      <!-- Header information for the owner-->
+      <div class="w-full pb-2 user-welcome-info">
+        <p class="text-lg">Welcome: {{ dataOwner.ownerAddress }}</p>
+        <p>Approved: {{ dataOwner.approved }}</p>
+      </div>
+      <div class="my-7" *ngIf="isProfile">
+        <h2>Personal information</h2>
+        <form
+          class="w-1/3 shadow-lg p-5 border rounded-md"
+          [formGroup]="ownerRegistrationForm"
+          (ngSubmit)="registerOwner()"
+          *ngIf="displayForm"
+        >
+          <mat-form-field appearance="fill" class="w-full mt-4">
+            <mat-label>Profession</mat-label>
+            <input matInput formControlName="profession" />
+            <mat-error>Profession is required</mat-error>
+          </mat-form-field>
+          <mat-form-field appearance="fill" class="w-full mt-4">
+            <mat-label>Location</mat-label>
+            <input matInput formControlName="location" />
+            <mat-error>Location is required</mat-error>
+          </mat-form-field>
+          <button
+            class="float-right disabled:opacity-40 px-5 py-3 text-base rounded-md text-zinc-800 bg-lime-500 hover:bg-lime-700 hover:text-white duration-500"
+            [disabled]="ownerRegistrationForm.invalid"
+          >
+            Submit
+          </button>
+          <button
+            class="px-5 py-3 text-base rounded-md bg-[#f44336] text-white hover:bg-orange-700 hover:text-white duration-500"
+            *ngIf="showCancelBtn"
+            (click)="onCancelButtonClick()"
+          >
+            Cancel
+          </button>
+        </form>
+        <div *ngIf="!displayForm">
+          <p>
+            <span class="font-medium">Profession:</span
+            ><span>{{ dataOwner.profession }}</span>
+          </p>
+          <p>
+            <span class="font-medium">Location:</span
+            ><span>{{ dataOwner.location }}</span>
+          </p>
+          <button
+            class="px-5 py-3 text-base rounded-md text-zinc-800 bg-lime-500 hover:bg-lime-700 hover:text-white duration-500"
+            (click)="onUpdateButtonClick()"
+          >
+            Update
+          </button>
+        </div>
+      </div>
+
+      <!-- Section for Adding and updating datasets-->
+      <div class="my-7" *ngIf="isDataSets">
+        <div class="flex justify-between">
+          <h2 class="text-lime-700">My datasets</h2>
+          <button
+            (click)="openDialog()"
+            class="px-4 py-1 text-base rounded-md text-zinc-800 bg-lime-500 hover:bg-lime-700 hover:text-white duration-500"
+          >
+            Add data
+          </button>
+        </div>
+        <div class="mt-3">
+          <mat-form-field appearance="standard">
+            <mat-label>Filter</mat-label>
+            <input
+              matInput
+              (keyup)="applyFilter($event)"
+              placeholder="Search"
+              #input
+            />
+          </mat-form-field>
+          <table
+            mat-table
+            [dataSource]="dataSource"
+            class="mat-elevation-z8 w-full"
+          >
+            <!-- Position Column -->
+            <ng-container matColumnDef="position">
+              <th mat-header-cell *matHeaderCellDef>No.</th>
+              <td mat-cell *matCellDef="let element">{{ element.position }}</td>
+            </ng-container>
+
+            <!-- Name Column -->
+            <ng-container matColumnDef="name">
+              <th mat-header-cell *matHeaderCellDef>Name</th>
+              <td mat-cell *matCellDef="let element">{{ element.name }}</td>
+            </ng-container>
+
+            <!-- Weight Column -->
+            <ng-container matColumnDef="weight">
+              <th mat-header-cell *matHeaderCellDef>Weight</th>
+              <td mat-cell *matCellDef="let element">{{ element.weight }}</td>
+            </ng-container>
+
+            <!-- Symbol Column -->
+            <ng-container matColumnDef="symbol">
+              <th mat-header-cell *matHeaderCellDef>Symbol</th>
+              <td mat-cell *matCellDef="let element">{{ element.symbol }}</td>
+            </ng-container>
+
+            <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+            <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
+
+            <!-- Row shown when there is no matching data. -->
+            <tr class="mat-row" *matNoDataRow>
+              <td class="mat-cell" colspan="4">
+                No data matching the filter "{{ input.value }}"
+              </td>
+            </tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- Section to view and grant access to requests-->
+      <div class="my-7" *ngIf="isRequests">
+        <p>Requests</p>
+      </div>
+    </div>
+  </mat-sidenav-content>
+</mat-sidenav-container>

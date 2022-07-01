@@ -31,17 +31,13 @@ export class ConnectService {
     private _snackBar: MatSnackBar,
     private alertService: AlertsService
   ) {
-    this.ethereum.on('accountsChanged', (accounts: any) => {
-      window.location.reload();
-    });
-
     this.userContract = this.createContract(
       this.userContractAddress,
       Users.abi
     );
 
     //this.getEncryptionkey();
-    this.encryptData();
+    //this.encryptData();
   }
 
   // openSnackBar(message: any) {
@@ -73,48 +69,12 @@ export class ConnectService {
     }
   }
 
-  async connectWallet() {
-    try {
-      if (!window.ethereum) return alert('Please install metamask');
-      const accounts = await window.ethereum.request({
-        method: 'eth_requestAccounts',
-      });
-      console.log('sjhfd');
-      return accounts[0];
-      //let users = this.getAllUsers();
-    } catch (error: any) {
-      this.alertService.alertErrorMessage(error.message);
-    }
-  }
-
-  async getConnectedUser() {
-    try {
-      if (!window.ethereum) return alert('Please install metamask');
-      const accounts = await window.ethereum.request({
-        method: 'eth_requestAccounts',
-      });
-      return accounts[0];
-      //let users = this.getAllUsers();
-    } catch (error: any) {
-      this.alertService.alertErrorMessage(error.message);
-    }
-  }
-
-  async isUserConnected() {
-    let provider = new ethers.providers.Web3Provider(this.ethereum);
-    if (provider._isProvider) {
-      let account = await provider.listAccounts();
-      return account.length > 0;
-    }
-    return;
-  }
-
   async getAllUsers() {
     let usercontract = await this.userContract;
     let users = await usercontract.getAllUsers();
     let structuredUsers = users.map((user: any) => ({
       address: user.userAddress,
-      role: user.role,
+      role: ethers.BigNumber.from(user.role).toNumber(),
       //approved: user.approved,
     }));
 
@@ -142,17 +102,40 @@ export class ConnectService {
     }
   }
 
-  async getOwner() {
+  async updateDataOwner(address: string, profession: string, location: string) {
+    try {
+      let usercontract = await this.userContract;
+
+      let transactionHash = await usercontract.updateDataOwner(
+        address,
+        profession,
+        location
+      );
+      // console.log(`Loading - ${transactionHash.hash}`);
+
+      await transactionHash.wait();
+      //console.log(`Success - ${transactionHash.hash}`);
+      this.alertService.alertSuccessMessage('Request submitted successfully');
+    } catch (error: any) {
+      console.log(error);
+      this.alertService.alertErrorMessage(error.data.message);
+    }
+  }
+
+  async getDataOwnerDetails() {
     try {
       let usercontract = await this.userContract;
       let owner = await usercontract.getDataOwner(
         '0x69632Dd67F25DaBEf66050504eb153d81Cc39143'
       );
+
       let structuredOwner = {
+        ownerAddress: owner.ownerAddress,
         profession: this.bytes32ToString(owner.profession),
         location: this.bytes32ToString(owner.location),
+        approved: owner.approved,
       };
-      console.log(structuredOwner);
+      return structuredOwner;
     } catch (error: any) {
       console.log(error);
       this.alertService.alertErrorMessage(error.data.message);
@@ -174,17 +157,17 @@ export class ConnectService {
   }
 
   //async addRequester(address: string);
-  async getEncryptionkey() {
-    let user = await this.getConnectedUser();
-    console.log(user);
-    const keyb64 = (await this.ethereum.request({
-      method: 'eth_getEncryptionPublicKey',
-      params: [user],
-    })) as string;
-    const publicKey = Buffer.from(keyb64, 'base64');
-    this.encryptionKey = publicKey;
-    console.log(publicKey);
-  }
+  // async getEncryptionkey() {
+  //   let user = await this.getConnectedUser();
+  //   console.log(user);
+  //   const keyb64 = (await this.ethereum.request({
+  //     method: 'eth_getEncryptionPublicKey',
+  //     params: [user],
+  //   })) as string;
+  //   const publicKey = Buffer.from(keyb64, 'base64');
+  //   this.encryptionKey = publicKey;
+  //   console.log(publicKey);
+  // }
 
   async encryptData() {
     let data1 = 'VenkatPravas';
