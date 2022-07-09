@@ -1,11 +1,9 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.6;
 
-import "./Organisations.sol";
-
-contract Users is Organisations {
-    address superadmin;
-    Organisations organisationInstance;
+contract Users {
+    address public superadmin;
+    //Organisations organisationInstance;
 
     struct Owner {
         address ownerAddress;
@@ -29,9 +27,10 @@ contract Users is Organisations {
         //bool approved;
     }
 
-    constructor(address orgcontractAddress) {
+    constructor() {
         superadmin = msg.sender;
-        organisationInstance = Organisations(orgcontractAddress);
+        allUsers.push(User(superadmin, 3));
+        //organisationInstance = Organisations(orgcontractAddress);
     }
 
     User[] allUsers;
@@ -98,7 +97,7 @@ contract Users is Organisations {
     function addDataRequester(address requesterAddress, bytes32 organisation, bytes32 department, bytes32 designation) public isUserExists(requesterAddress) {
         requesters[requesterAddress] = Requester(requesterAddress, organisation, department, designation, false);
         allUsers.push(User(requesterAddress, 2));
-        organisationInstance.addOrganisation(organisation, department, designation);
+        //organisationInstance.addOrganisation(organisation, department, designation);
         emit NewRequesterCreated(requesterAddress, organisation, department, designation, false);
     }
 
@@ -123,6 +122,10 @@ contract Users is Organisations {
 
     function getDataRequester(address requesterAddress) public view returns(Requester memory) {
         return requesters[requesterAddress];
+    }
+
+    function getSuperAdmin() public view returns(address) {
+        return superadmin;
     }
 
     function approveOwner(address ownerAddress) public onlySuperAdmin(msg.sender) {

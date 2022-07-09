@@ -1,42 +1,53 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.6;
 
-contract Organisations {
+import "./Users.sol";
+
+contract Organisations is Users {
+
+    Users usersContractInstance;
 
     struct Department {
-        bytes32 depid;
+        string depid;
         bytes32 depname;
         bytes32[] designations;
     }
 
     struct Organisation {
-        bytes32 orgid;
+        string orgid;
         bytes32 orgname;
-        Department[] departments;
+        uint totalDepartments;
+        string[] departmentids;
     }
 
     struct OrganisationMinimal {
-        bytes32 orgid;
+        string orgid;
         bytes32 orgname;
     }
 
     struct DepartmentMinimal {
-        bytes32 depid;
+        string depid;
         bytes32 depname;
     }
 
-    constructor() {
+    constructor(address userContractAddress) {
+        usersContractInstance = Users(userContractAddress);
     }
 
     // Mapping goes here
-    mapping(bytes32 => Organisation) organisations;
-    mapping(bytes32 => Department) departments;
+    mapping(string => Organisation) organisations;
+    mapping(string => Department) departments;
     
     bytes32[] alldesignations;
     OrganisationMinimal[] allOrganisations;
     DepartmentMinimal[] allDepartments;
 
     uint organisationCounter = 0;
+
+    modifier superAdmin(address senderAddress) {
+        require(usersContractInstance.getSuperAdmin() == senderAddress, "Invalid user operation");
+        _;
+    }
 
     // this function is copied from https://ethereum.stackexchange.com/questions/9142/how-to-convert-a-string-to-bytes32
     // to make it possible to use ERC725 functions
@@ -84,26 +95,54 @@ contract Organisations {
         return string(abi.encodePacked(val, sid));
     }
 
-    function addOrganisation(bytes32 name, bytes32 department, bytes32 designation) public {
+    function createOrganisation(bytes32 name, bytes32 departmentName, bytes32 designation, bool isAddDesignation) external {
         organisationCounter = organisationCounter + 1;
-        string memory oid = makeId(organisationCounter, "org");
-        bytes32 orgid = stringToBytes32(oid);
-
-        uint deptlength = organisations[orgid].departments.length;
-        string memory odid = string(abi.encodePacked(oid, "dep"));
-        string memory did = makeId(deptlength, odid);
-        bytes32 finaldid = stringToBytes32(did);
-
+        string memory orgid = makeId(organisationCounter, "org");
+        //bytes32 orgid = stringToBytes32(oid);
         organisations[orgid].orgid = orgid;
         organisations[orgid].orgname = name;
-        departments[finaldid].depid = finaldid;
-        departments[finaldid].depname = department;
-        departments[finaldid].designations.push(designation);
 
-        organisations[orgid].departments.push(departments[finaldid]);
+        uint deptlength = organisations[orgid].totalDepartments + 1;
+        string memory odid = string(abi.encodePacked(orgid, "dep"));
+        string memory finaldid = makeId(deptlength, odid);
+        //bytes32 finaldid = stringToBytes32(did); 
+        organisations[orgid].totalDepartments++;
+        organisations[orgid].departmentids.push(finaldid);
+        departments[finaldid].depid = finaldid;
+        departments[finaldid].depname = departmentName;
+        departments[finaldid].designations.push(designation);
+        if(isAddDesignation) {
+            alldesignations.push(designation);
+        }
+        allOrganisations.push(OrganisationMinimal(orgid, name));
+        allDepartments.push(DepartmentMinimal(finaldid, departmentName));
     }
 
-    function getAllOrganisation() public view returns(OrganisationMinimal[] memory) {
+    function addDepartmentToOrg(string memory orgid, bytes32 departmentName, bytes32 designation, bool isAddDesignation) external {
+        require(keccak256(bytes(organisations[orgid].orgid)) == keccak256(bytes(orgid)), "Invalid organisation"); 
+        uint deptlength = organisations[orgid].totalDepartments + 1;
+        string memory odid = string(abi.encodePacked(orgid, "dep"));
+        string memory finaldid = makeId(deptlength, odid);
+        organisations[orgid].totalDepartments++;
+        organisations[orgid].departmentids.push(finaldid);
+        departments[finaldid].depid = finaldid;
+        departments[finaldid].depname = departmentName;
+        departments[finaldid].designations.push(designation);
+        if(isAddDesignation) {
+            alldesignations.push(designation);
+        }
+        allDepartments.push(DepartmentMinimal(finaldid, departmentName));
+    }
+
+    function addDesignationToDepartment(string memory depid, bytes32 designation, bool isAddDesignation) external {
+        require(departments[depid].designations.length > 0, "Invalid department");
+        if(isAddDesignation) {
+            alldesignations.push(designation);
+        }
+        departments[depid].designations.push(designation); 
+    }
+
+    function getAllOrganisations() public view returns(OrganisationMinimal[] memory) {
         return allOrganisations;
     }
 
@@ -115,15 +154,16 @@ contract Organisations {
         return alldesignations;
     }
 
-    function getOrganisation(bytes32 orgid) public view returns(Organisation memory) {
+    // function getAllDesignations() public view returns(bytes32[] memory) {
+    //     return alldesignations;
+    // }
+
+    function getOrganisation(string memory orgid) public view returns(Organisation memory) {
         return organisations[orgid];
     }
 
-    function getDepartment(bytes32 depid) public view returns(Department memory) {
+    function getDepartment(string memory depid) public view returns(Department memory) {
         return departments[depid];
     }
 
-    function isOrgAdmin() public pure returns(bool) {
-        return false;
-    }
 }

@@ -1,0 +1,26 @@
+version: "3.7"
+
+services:
+  # Mongo container
+  mongodb:
+    container_name: dapp_db
+    image: mongo:latest
+    restart: always
+    ports:
+      - 27017:27017
+    volumes:
+      - type: volume
+        target: /data/db # Default path for mongodbS
+
+  # Service for Node server app
+  nodeapp:
+    container_name: dapp_server
+    build: .
+    ports:
+      - 7000:7000
+    depends_on:
+      - mongodb
+
+volumes:
+  mongodb:
+    driver: local
