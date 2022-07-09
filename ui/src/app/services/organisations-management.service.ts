@@ -107,4 +107,33 @@ export class OrganisationsManagementService {
     // }
     return structuredData;
   }
+
+  async getDepartmentDetails(depid: string) {
+    try {
+      let organisationcontract = await this.organisationContract;
+      let fullDepartmentStruct = await organisationcontract.getDepartment(
+        depid
+      );
+      // let roles = fullDepartmentStruct.designations.map(
+      //   (designation: string) => {
+      //     return this.genericService.bytesToString(designation);
+      //   }
+      // );
+      // console.log(roles);
+      let structuredData = {
+        depid: fullDepartmentStruct.depid,
+        depname: this.genericService.bytesToString(
+          fullDepartmentStruct.depname
+        ),
+        designations: fullDepartmentStruct.designations.map(
+          (designation: string) => {
+            return this.genericService.bytesToString(designation);
+          }
+        ),
+      };
+      return structuredData;
+    } catch (error: any) {
+      console.log(error);
+    }
+  }
 }

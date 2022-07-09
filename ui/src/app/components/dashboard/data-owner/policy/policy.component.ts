@@ -21,11 +21,11 @@ export class PolicyComponent implements OnInit {
   allOrganisations: Organisation[] = [];
   allDepartments: any;
   allRoles: any;
-  orgsepcdepts: any;
   roles: string[] = [];
   deptSpecRoles: any = [];
   filteredDepartments: any = [];
   filteredRoles: any = [];
+  organisationAndDepartmentsStore: any = [];
   constructor(
     @Inject(MAT_DIALOG_DATA) private data: any,
     private dialogRef: MatDialogRef<PolicyComponent>,
@@ -69,13 +69,13 @@ export class PolicyComponent implements OnInit {
         ...returnedDepartments,
       ])
     );
-    let otherdeps = JSON.parse(JSON.stringify(returnedDepartments));
-    this.filteredDepartments = JSON.parse(
-      JSON.stringify([
-        { depid: 'any', depname: 'any', isAllowed: true },
-        ...otherdeps,
-      ])
-    );
+    // let otherdeps = JSON.parse(JSON.stringify(returnedDepartments));
+    // this.filteredDepartments = JSON.parse(
+    //   JSON.stringify([
+    //     { depid: 'any', depname: 'any', isAllowed: true },
+    //     ...otherdeps,
+    //   ])
+    // );
   }
 
   async getAllDesignations() {
@@ -87,7 +87,7 @@ export class PolicyComponent implements OnInit {
         return designationObj;
       });
       this.allRoles = [...this.filteredRoles, ...designations];
-      this.filteredRoles = [...this.filteredRoles, ...designations];
+      //this.filteredRoles = [...this.filteredRoles, ...designations];
     } catch (error: any) {
       console.log(error);
     }
@@ -147,59 +147,155 @@ export class PolicyComponent implements OnInit {
     this.validateIsAnyOrg(isAnyOrg);
     this.filteredDepartments = JSON.parse(JSON.stringify([]));
     if (isAnyOrg) {
-      console.log(this.allDepartments);
+      this.policyForm.controls['organisations'].setValue(['any']);
       this.filteredDepartments = JSON.parse(
         JSON.stringify(this.allDepartments)
       );
       return;
     }
-    this.orgsepcdepts = [];
-    this.roles = [];
-    this.deptSpecRoles = [];
+    if (organisations.length <= 0) {
+      this.filteredDepartments = [];
+      return;
+    }
 
     this.filteredRoles = [];
+    this.filteredDepartments = [
+      { depid: 'any', depname: 'any', isAllowed: true },
+    ];
     for (let i = 0; i < organisations.length; i++) {
-      let deps = await this.orgService.organisationSpecificDepartments(
-        organisations[i]
-      );
-      let { departmentids } = deps;
-      let mappedDepartments: any = [];
+      let returnedOrganisations =
+        await this.orgService.organisationSpecificDepartments(organisations[i]);
+      let { departmentids } = returnedOrganisations;
+      // Maintain a store of organisations and department ids
+      if (this.organisationAndDepartmentsStore.length <= 0) {
+        this.organisationAndDepartmentsStore.push({
+          ...returnedOrganisations,
+        });
+      } else {
+        let found = this.organisationAndDepartmentsStore.find(
+          (org: any) => org.orgid === organisations[i]
+        );
+        if (found) {
+          found.departmentids = departmentids;
+        } else {
+          this.organisationAndDepartmentsStore.push({
+            ...returnedOrganisations,
+          });
+        }
+      }
       departmentids.map((depid: string) => {
         this.allDepartments.map((department: any) => {
           if (department.depid.toLowerCase() === depid.toLowerCase()) {
             let newdep = JSON.parse(JSON.stringify(department));
-            newdep.depname = newdep.depname + ' - ' + deps.orgname;
+            newdep.depname =
+              newdep.depname + ' - ' + returnedOrganisations.orgname;
             this.filteredDepartments.push(newdep);
           }
         });
       });
-      // for (let k = 0; k < deps.length; k++) {
-      //   this.deptSpecRoles.push(deps[k]);
-      //   this.orgsepcdepts.push({
-      //     depid: deps[k].depid,
-      //     depname: deps[k].depname,
-      //   });
-      //   this.roles = [...this.roles, ...deps[k].designations];
-      // }
     }
+  }
+  async getDepartmentNames(ids: string[]) {
+    let names: string[] = [];
+    ids.map((id: string) => {
+      this.allDepartments.map((department: any) => {
+        if (department.depid.toLowerCase() === id.toLowerCase()) {
+          names.push(department.depname);
+        }
+      });
+    });
+    return names;
+  }
+
+  async getDepartmentIds(names: string[]) {
+    let ids: string[] = [];
+    names.map((name: string) => {
+      this.allDepartments.map((department: any) => {
+        if (department.depname.toLowerCase() === name.toLowerCase()) {
+          ids.push(department.depid);
+        }
+      });
+    });
+    return ids;
   }
 
   async onDepartmentChange() {
-    this.roles = [];
-    let { departments } = this.policyForm.value;
+    let { organisations, departments } = this.policyForm.value;
+    //let departmentNames = departments.map((dep: any) => dep.depname);
+    // let departmentIds = departments.map((dep: any) => dep.depid);
+
     let isAnyDept = departments.includes('any');
+    let isAnyOrg = organisations.includes('any');
     this.validateIsAnyDepartment(isAnyDept);
     if (isAnyDept) {
+      this.policyForm.controls['departments'].setValue(['any']);
+      this.filteredRoles = JSON.parse(JSON.stringify(this.allRoles));
+      return;
     }
+    if (departments.length <= 0) {
+      this.filteredRoles = [];
+      return;
+    }
+    // Any organisation specific departments
+    if (isAnyOrg) {
+      if (!isAnyDept) {
+        let selectedDepartmentNames: string[] = await this.getDepartmentNames(
+          departments
+        );
+        let matchedDepartmentIds: string[] = await this.getDepartmentIds(
+          selectedDepartmentNames
+        );
+        this.filteredRoles = [{ name: 'any', isAllowed: true }];
+        for (let i = 0; i < matchedDepartmentIds.length; i++) {
+          let returnedDepartment: any =
+            await this.orgService.getDepartmentDetails(matchedDepartmentIds[i]);
+          let { depid, depname, designations } = returnedDepartment;
+          designations.map((designation: string) => {
+            this.filteredRoles.push(
+              JSON.parse(
+                JSON.stringify({
+                  name: designation + ' - ' + depname,
+                  isAllowed: true,
+                })
+              )
+            );
+          });
+        }
+        return;
+      }
+    }
+    this.filteredRoles = [{ name: 'any', isAllowed: true }];
     for (let i = 0; i < departments.length; i++) {
+      let returnedDepartment: any = await this.orgService.getDepartmentDetails(
+        departments[i]
+      );
+      let { depid, depname, designations } = returnedDepartment;
+      designations.map((designation: string) => {
+        this.organisationAndDepartmentsStore.map((organisation: any) => {
+          let found = organisation.departmentids.includes(depid);
+          if (found) {
+            let orgname = organisation.orgname;
+            this.filteredRoles.push(
+              JSON.parse(
+                JSON.stringify({
+                  name: designation + ' - ' + orgname + ' - ' + depname,
+                  isAllowed: true,
+                })
+              )
+            );
+          }
+        });
+        //this.filteredRoles
+      });
+
       // for(let k = 0; k < this.deptSpecRoles.length; k++) {
       //   if(departments[i])
       // }
-      this.deptSpecRoles.map((dep: any) => {
-        if (departments[i] === dep.depid) {
-          this.roles = [...this.roles, ...dep.designations];
-        }
-      });
+      // this.deptSpecRoles.map((dep: any) => {
+      //   if (departments[i] === dep.depid) {
+      //     this.roles = [...this.roles, ...dep.designations];
+      //   }
+      // });
     }
   }
 
