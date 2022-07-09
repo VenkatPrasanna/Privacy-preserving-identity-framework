@@ -1,10 +1,13 @@
-import { Component, Inject, Input, OnInit } from '@angular/core';
+import { Component, Inject, Input, OnInit, ViewChild } from '@angular/core';
 import { FormGroup, Validators, FormControl } from '@angular/forms';
-import { MatTableDataSource } from '@angular/material/table';
+import { MatTable, MatTableDataSource } from '@angular/material/table';
 import { MatDialog, MAT_DIALOG_DATA } from '@angular/material/dialog';
 
 import { ConnectService } from '../../../services/connect.service';
 import { GenericService } from '../../../services/generic.service';
+import { ServerService } from '../../../services/server.service';
+import { ModifyDataComponent } from './modify-data/modify-data.component';
+import { PolicyComponent } from './policy/policy.component';
 
 export interface DialogData {
   animal: 'panda' | 'unicorn' | 'lion';
@@ -17,21 +20,13 @@ export interface DataOwner {
   approved: boolean;
 }
 
-export interface PeriodicElement {
+export interface Dataset {
+  dataid: string;
+  address: string;
   name: string;
-  position: number;
-  weight: number;
-  symbol: string;
+  value: string;
+  category: string;
 }
-
-const ELEMENT_DATA: PeriodicElement[] = [
-  { position: 1, name: 'Hydrogen', weight: 1.0079, symbol: 'H' },
-  { position: 2, name: 'Helium', weight: 4.0026, symbol: 'He' },
-  { position: 3, name: 'Lithium', weight: 6.941, symbol: 'Li' },
-  { position: 4, name: 'Beryllium', weight: 9.0122, symbol: 'Be' },
-];
-
-const categories = ['Market', 'Health', 'Identity governance'];
 
 @Component({
   selector: 'app-data-owner',
@@ -53,12 +48,14 @@ export class DataOwnerComponent implements OnInit {
   isRequests: boolean = false;
   isDataSets: boolean = false;
 
-  displayedColumns: string[] = ['position', 'name', 'weight', 'symbol'];
-  dataSource = new MatTableDataSource(ELEMENT_DATA);
+  displayedColumns: string[] = ['id', 'name', 'value', 'category', 'actions'];
+  dataSource: any;
+  @ViewChild(MatTable) table: MatTable<Dataset>;
 
   constructor(
     private connectService: ConnectService,
     private genericService: GenericService,
+    private serverService: ServerService,
     public dialog: MatDialog
   ) {}
 
@@ -68,6 +65,7 @@ export class DataOwnerComponent implements OnInit {
       location: new FormControl('', Validators.required),
     });
     this.getOwnerDetails();
+    this.getAllkeys();
   }
 
   applyFilter(event: Event) {
@@ -75,11 +73,44 @@ export class DataOwnerComponent implements OnInit {
     this.dataSource.filter = filterValue.trim().toLowerCase();
   }
 
-  openDialog() {
-    this.dialog.open(DialogDataExampleDialog, {
+  modifyData(actiontype: string) {
+    let categories = ['Marketing', 'Automobile'];
+    let dialogRef: any;
+    if (actiontype === 'add') {
+      dialogRef = this.dialog.open(ModifyDataComponent, {
+        height: '400px',
+        width: '600px',
+        data: {
+          type: 'add',
+          categories: categories,
+        },
+        disableClose: true,
+      });
+    } else if (actiontype === 'update') {
+      dialogRef = this.dialog.open(ModifyDataComponent, {
+        data: {
+          type: 'update',
+          categories: categories,
+        },
+      });
+    }
+    dialogRef.afterClosed().subscribe((result: any) => {
+      let datasets = this.dataSource.data;
+      datasets.push(result);
+      this.dataSource.data = datasets;
+      this.table.renderRows();
+    });
+  }
+
+  updatePolicy(dataid: string) {
+    console.log('update policy', dataid);
+    let dialogRef = this.dialog.open(PolicyComponent, {
+      height: '500px',
+      width: '600px',
       data: {
-        animal: 'panda',
+        dataid: dataid,
       },
+      disableClose: true,
     });
   }
 
@@ -97,6 +128,9 @@ export class DataOwnerComponent implements OnInit {
       this.isProfile = false;
       this.isRequests = false;
       this.isDataSets = true;
+      if (!this.dataSource) {
+        this.getDatasets();
+      }
     }
   }
 
@@ -133,8 +167,8 @@ export class DataOwnerComponent implements OnInit {
   async registerOwner() {
     try {
       let { profession, location } = this.ownerRegistrationForm.value;
-      profession = this.genericService.stringToBytes32(profession);
-      location = this.genericService.stringToBytes32(location);
+      profession = this.genericService.stringToBytes(profession);
+      location = this.genericService.stringToBytes(location);
       let connecteduser = await this.genericService.getConnectedUser();
       console.log(connecteduser, profession, location);
       console.log(this.isUserAddition);
@@ -152,8 +186,8 @@ export class DataOwnerComponent implements OnInit {
   async updateOwner() {
     try {
       let { profession, location } = this.ownerRegistrationForm.value;
-      profession = this.genericService.stringToBytes32(profession);
-      location = this.genericService.stringToBytes32(location);
+      profession = this.genericService.stringToBytes(profession);
+      location = this.genericService.stringToBytes(location);
       let connecteduser = await this.genericService.getConnectedUser();
       console.log(connecteduser, profession, location);
       console.log(this.isUserAddition);
@@ -181,15 +215,20 @@ export class DataOwnerComponent implements OnInit {
     }
   }
 
+  async getDatasets() {
+    let datasets = await this.connectService.getUserData();
+    this.dataSource = new MatTableDataSource(datasets);
+  }
+
+  async getAllkeys() {
+    console.log('all keys');
+    let keys = await this.serverService.getAllKeys();
+    keys.subscribe((data: any) => {
+      console.log(data);
+    });
+  }
+
   resetForms() {
     this.ownerRegistrationForm.reset();
   }
-}
-
-@Component({
-  selector: 'modify-data',
-  templateUrl: 'modify-data.component.html',
-})
-export class DialogDataExampleDialog {
-  constructor(@Inject(MAT_DIALOG_DATA) public data: DialogData) {}
 }

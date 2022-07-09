@@ -1,1 +1,39 @@
-<p>data-requester works!</p>
+<mat-sidenav-container>
+  <mat-sidenav
+    class="w-48 bg-[#1939ab] text-white rounded-lg p-4 text-center"
+    mode="side"
+    opened
+  >
+    <button mat-button class="menu-button">
+      <mat-icon>person</mat-icon><span>Profile</span>
+    </button>
+    <button mat-button class="menu-button" *ngIf="dataRequester.approved">
+      <mat-icon>remove_red_eye</mat-icon><span>Allowed data</span>
+    </button>
+    <button mat-button class="menu-button" *ngIf="dataRequester.approved">
+      <mat-icon>create_new_folder</mat-icon><span>Request data</span>
+    </button>
+  </mat-sidenav>
+  <mat-sidenav-content>
+    <div
+      class="flex flex-col ml-5 justify-start p-12 rounded-lg mat-elevation-z4 usercomponent"
+    >
+      <!-- Header information for the owner-->
+      <div class="w-full pb-2 user-welcome-info">
+        <p class="text-lg">Welcome: {{ dataRequester.requesterAddress }}</p>
+        <p>
+          Approved:
+          <span
+            class="text-pink-800 font-bold"
+            [ngClass]="{ 'text-green-800': dataRequester.approved }"
+            >{{ dataRequester.approved }}</span
+          >
+        </p>
+      </div>
+
+      <!-- Section for Adding and updating datasets-->
+
+      <!-- Section to view and grant access to requests-->
+    </div>
+  </mat-sidenav-content>
+</mat-sidenav-container>

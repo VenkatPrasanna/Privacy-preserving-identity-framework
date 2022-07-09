@@ -1,0 +1,27 @@
+mat-sidenav-container {
+  height: calc(100vh - 55px);
+}
+
+.usercomponent {
+  min-height: calc(100vh - 57px);
+}
+
+.menu-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  font-size: 1rem;
+}
+
+mat-icon {
+  margin-right: 8px;
+}
+
+.user-welcome-info {
+  border-bottom: 2px solid #00ca9b;
+}
+
+.user-welcome-info p {
+  margin: 0;
+}

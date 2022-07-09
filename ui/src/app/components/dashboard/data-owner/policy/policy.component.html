@@ -1,0 +1,72 @@
+<div class="min-h-full">
+  <p class="text-pink-800 font-medium text-2xl w-full">Set policy</p>
+  <div class="flex justify-center items-center h-72" *ngIf="isLoading">
+    <mat-spinner></mat-spinner>
+  </div>
+
+  <form
+    [formGroup]="policyForm"
+    (ngSubmit)="onPolicySubmit()"
+    *ngIf="!isLoading"
+  >
+    <mat-form-field appearance="fill" class="w-full mt-4">
+      <mat-label>Dataid</mat-label>
+      <input
+        matInput
+        formControlName="dataid"
+        readonly
+        class="cursor-not-allowed"
+      />
+    </mat-form-field>
+    <mat-form-field appearance="fill" class="w-full mt-4">
+      <mat-label>Organisations</mat-label>
+      <mat-select
+        formControlName="organisations"
+        (selectionChange)="onOrganisationChange()"
+        multiple
+      >
+        <mat-option
+          *ngFor="let org of allOrganisations"
+          [value]="org.orgid"
+          [disabled]="!org.isAllowed"
+          >{{ org.orgname }}</mat-option
+        >
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="fill" class="w-full mt-4">
+      <mat-label>Departments</mat-label>
+      <mat-select
+        formControlName="departments"
+        (selectionChange)="onDepartmentChange()"
+        multiple
+      >
+        <mat-option
+          *ngFor="let dep of filteredDepartments"
+          [value]="dep.depid"
+          [disabled]="!dep.isAllowed"
+          >{{ dep.depname }}</mat-option
+        >
+      </mat-select>
+    </mat-form-field>
+    <mat-form-field appearance="fill" class="w-full mt-4">
+      <mat-label>Roles</mat-label>
+      <mat-select
+        formControlName="designations"
+        (selectionChange)="onRoleChange()"
+        multiple
+      >
+        <mat-option
+          *ngFor="let role of filteredRoles"
+          [value]="role.name"
+          [disabled]="!role.isAllowed"
+          >{{ role.name }}</mat-option
+        >
+      </mat-select>
+    </mat-form-field>
+    <button
+      class="float-right disabled:opacity-40 px-5 py-3 text-base rounded-md text-zinc-800 bg-lime-500 hover:bg-lime-700 hover:text-white duration-500"
+    >
+      Submit
+    </button>
+  </form>
+</div>

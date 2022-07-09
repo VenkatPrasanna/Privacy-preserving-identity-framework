@@ -1,14 +1,40 @@
-<div>
-  <form>
+<div class="min-h-full">
+  <p class="text-pink-800 font-medium text-2xl w-full">Add data</p>
+  <div class="flex justify-center items-center h-72" *ngIf="isLoading">
+    <mat-spinner></mat-spinner>
+  </div>
+
+  <form [formGroup]="dataForm" (ngSubmit)="onDataSubmit()" *ngIf="!isLoading">
     <mat-form-field appearance="fill" class="w-full mt-4">
-      <mat-label>Profession</mat-label>
-      <input matInput />
-      <mat-error>Profession is required</mat-error>
+      <mat-label>Name</mat-label>
+      <input matInput formControlName="name" />
+      <mat-error>Name is required</mat-error>
     </mat-form-field>
     <mat-form-field appearance="fill" class="w-full mt-4">
-      <mat-label>Location</mat-label>
-      <input matInput />
-      <mat-error>Location is required</mat-error>
+      <mat-label>Value</mat-label>
+      <textarea
+        matInput
+        cdkTextareaAutosize
+        #autosize="cdkTextareaAutosize"
+        cdkAutosizeMinRows="1"
+        cdkAutosizeMaxRows="5"
+        formControlName="value"
+      ></textarea>
+      <mat-error>Value is required</mat-error>
     </mat-form-field>
+    <mat-form-field appearance="fill" class="w-full mt-4">
+      <mat-label>Category</mat-label>
+      <mat-select formControlName="category">
+        <mat-option *ngFor="let category of categories" [value]="category">
+          {{ category }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
+    <button
+      class="float-right disabled:opacity-40 px-5 py-3 text-base rounded-md text-zinc-800 bg-lime-500 hover:bg-lime-700 hover:text-white duration-500"
+      [disabled]="dataForm.invalid"
+    >
+      Submit
+    </button>
   </form>
 </div>

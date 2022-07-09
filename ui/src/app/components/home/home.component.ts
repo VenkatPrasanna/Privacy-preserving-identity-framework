@@ -38,6 +38,7 @@ export class HomeComponent implements OnInit {
     let isExistingUser = allusers.find(
       (user: any) => user.address.toLowerCase() === connecteduser
     );
+    console.log(isExistingUser);
     if (isExistingUser) {
       // Check here for approval status
       // Roles - 1 is Data owner, 2 is Data Requester
@@ -47,6 +48,8 @@ export class HomeComponent implements OnInit {
         this.router.navigate(['data-requester']);
       }
       //this.router.navigate(['admin']);
+    } else {
+      this.router.navigate(['user']);
     }
   }
 }

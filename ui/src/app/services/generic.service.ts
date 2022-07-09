@@ -51,12 +51,26 @@ export class GenericService {
     return false;
   }
 
-  stringToBytes32(str: string) {
+  stringToBytes(str: string) {
     const buffstr = Buffer.from(str).toString('hex');
+    if (buffstr.length >= 64) {
+      return '0x' + buffstr;
+    }
     return '0x' + buffstr + '0'.repeat(64 - buffstr.length);
   }
 
-  bytes32ToString(bytes: any) {
+  bytesToString(bytes: any) {
     return Buffer.from(bytes.slice(2).split('00')[0], 'hex').toString();
+  }
+
+  async createContract(address: string, abi: any) {
+    try {
+      let provider = new ethers.providers.Web3Provider(this.ethereum);
+      const signer = provider.getSigner();
+      const contract = new ethers.Contract(address, abi, signer);
+      return contract;
+    } catch (error) {
+      console.log(error);
+    }
   }
 }

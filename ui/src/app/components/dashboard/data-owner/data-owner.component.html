@@ -4,12 +4,18 @@
     mode="side"
     opened
   >
-    <button mat-button class="menu-button" (click)="updateView('profile')">
+    <button
+      mat-button
+      class="menu-button"
+      [ngClass]="{ 'bg-teal-400': isProfile }"
+      (click)="updateView('profile')"
+    >
       <mat-icon>person</mat-icon><span>Profile</span>
     </button>
     <button
       mat-button
       class="menu-button"
+      [ngClass]="{ 'bg-teal-400': isRequests }"
       *ngIf="dataOwner.approved"
       (click)="updateView('requests')"
     >
@@ -18,6 +24,7 @@
     <button
       mat-button
       class="menu-button"
+      [ngClass]="{ 'bg-teal-400': isDataSets }"
       *ngIf="dataOwner.approved"
       (click)="updateView('dataset')"
     >
@@ -88,7 +95,7 @@
         <div class="flex justify-between">
           <h2 class="text-lime-700">My datasets</h2>
           <button
-            (click)="openDialog()"
+            (click)="modifyData('add')"
             class="px-4 py-1 text-base rounded-md text-zinc-800 bg-lime-500 hover:bg-lime-700 hover:text-white duration-500"
           >
             Add data
@@ -110,9 +117,9 @@
             class="mat-elevation-z8 w-full"
           >
             <!-- Position Column -->
-            <ng-container matColumnDef="position">
-              <th mat-header-cell *matHeaderCellDef>No.</th>
-              <td mat-cell *matCellDef="let element">{{ element.position }}</td>
+            <ng-container matColumnDef="id">
+              <th mat-header-cell *matHeaderCellDef>ID</th>
+              <td mat-cell *matCellDef="let element">{{ element.dataid }}</td>
             </ng-container>
 
             <!-- Name Column -->
@@ -122,15 +129,28 @@
             </ng-container>
 
             <!-- Weight Column -->
-            <ng-container matColumnDef="weight">
-              <th mat-header-cell *matHeaderCellDef>Weight</th>
-              <td mat-cell *matCellDef="let element">{{ element.weight }}</td>
+            <ng-container matColumnDef="value">
+              <th mat-header-cell *matHeaderCellDef>Value</th>
+              <td mat-cell *matCellDef="let element">{{ element.value }}</td>
             </ng-container>
 
             <!-- Symbol Column -->
-            <ng-container matColumnDef="symbol">
-              <th mat-header-cell *matHeaderCellDef>Symbol</th>
-              <td mat-cell *matCellDef="let element">{{ element.symbol }}</td>
+            <ng-container matColumnDef="category">
+              <th mat-header-cell *matHeaderCellDef>Category</th>
+              <td mat-cell *matCellDef="let element">{{ element.category }}</td>
+            </ng-container>
+
+            <ng-container matColumnDef="actions">
+              <th mat-header-cell *matHeaderCellDef>Actions</th>
+              <td mat-cell *matCellDef="let element">
+                <button
+                  mat-raised-button
+                  class="text-white bg-purple-700 hover:bg-purple-800"
+                  (click)="updatePolicy(element.dataid)"
+                >
+                  Policy
+                </button>
+              </td>
             </ng-container>
 
             <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>

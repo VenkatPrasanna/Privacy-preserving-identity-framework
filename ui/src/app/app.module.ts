@@ -5,6 +5,7 @@ import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ReactiveFormsModule } from '@angular/forms';
+import { HttpClientModule } from '@angular/common/http';
 
 import { MaterialModule } from './material/material.module';
 import { HomeComponent } from './components/home/home.component';
@@ -17,6 +18,7 @@ import { SuperAdminComponent } from './components/dashboard/super-admin/super-ad
 import { SidenavComponent } from './components/dashboard/sidenav/sidenav.component';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { ModifyDataComponent } from './components/dashboard/data-owner/modify-data/modify-data.component';
+import { PolicyComponent } from './components/dashboard/data-owner/policy/policy.component';
 
 @NgModule({
   declarations: [
@@ -31,12 +33,14 @@ import { ModifyDataComponent } from './components/dashboard/data-owner/modify-da
     SidenavComponent,
     DashboardComponent,
     ModifyDataComponent,
+    PolicyComponent,
   ],
   imports: [
     BrowserModule,
     AppRoutingModule,
     BrowserAnimationsModule,
     ReactiveFormsModule,
+    HttpClientModule,
     MaterialModule,
   ],
   providers: [],

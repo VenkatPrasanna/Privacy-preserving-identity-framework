@@ -29,6 +29,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTreeModule } from '@angular/material/tree';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatDividerModule } from '@angular/material/divider';
+import { TextFieldModule } from '@angular/cdk/text-field';
 
 const MaterialComponents = [
   MatButtonModule,
@@ -60,6 +61,7 @@ const MaterialComponents = [
   MatTreeModule,
   MatSidenavModule,
   MatDividerModule,
+  TextFieldModule,
 ];
 
 @NgModule({
