@@ -1,9 +1,10 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.6;
 
+import "./Users.sol";
 
-contract Policies {
-    
+contract Policies is Users {
+    Users usersContractInstance;
     struct Policy {
         bytes32 dataid;
         bytes32 policies;
@@ -13,6 +14,15 @@ contract Policies {
     mapping (bytes32=>bytes32) dataItemPolicies;
 
     Policy[] allPolicies;
+
+    modifier onlyDataOwner(address ownerAddress) {
+        require(usersContractInstance.getDataOwner(ownerAddress).ownerAddress == ownerAddress, "Invalid action");
+        _;
+    }
+
+    constructor(address userContractAddress) {
+        usersContractInstance = Users(userContractAddress);
+    }
 
     function createPolicy(bytes32 dataid, bytes32 policies) external {
         dataItemPolicies[dataid] = policies;

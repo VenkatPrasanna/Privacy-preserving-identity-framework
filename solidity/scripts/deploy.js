@@ -20,6 +20,14 @@ const main = async () => {
   );
   await dataManagementContract.deployed();
 
+  const PolicyManagementContract = await hre.ethers.getContractFactory(
+    "Policies"
+  );
+  const policyManagementContract = await PolicyManagementContract.deploy(
+    usersContract.address
+  );
+  await policyManagementContract.deployed();
+
   //   await domainsContract.deployed();
   //   await attributesContract.deployed();
   //   await accessControlContract.deployed();
@@ -33,11 +41,10 @@ const main = async () => {
     "Data Management contract address: ",
     dataManagementContract.address
   );
-  //   console.log("Attributes contract address: ", attributesContract.address);
-  //   console.log(
-  //     "AccessControl contract address: ",
-  //     accessControlContract.address
-  //   );
+  console.log(
+    "Policy Management contract address: ",
+    policyManagementContract.address
+  );
 };
 
 const runMain = async () => {
