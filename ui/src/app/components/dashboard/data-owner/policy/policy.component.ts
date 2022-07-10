@@ -378,17 +378,30 @@ export class PolicyComponent implements OnInit {
     }
   }
 
-  async policyConstruct(organisation: any, department: any) {
+  async constructOrganisation(name: string) {
+    let organisation: any = new Object();
+    organisation['name'] = name;
+    organisation['departments'] = [];
+    return JSON.parse(JSON.stringify(organisation));
+  }
+  async constructDepartment(name: string) {
+    let department: any = new Object();
+    department['name'] = name;
+    department['designations'] = [];
+    return JSON.parse(JSON.stringify(department));
+  }
+
+  async policyConstruct(organisation: any) {
     try {
       let policy: any = new Object();
       policy['organisation'] = new Object();
-      organisation['departments'].push({ ...department });
       policy['organisation'] = { ...organisation };
       return policy;
     } catch (error) {
       console.log(error);
     }
   }
+
   async onPolicySubmit() {
     try {
       let { dataid, organisations, departments, designations } =
@@ -407,50 +420,31 @@ export class PolicyComponent implements OnInit {
       let isAnyDept = departments.includes('any');
       let isAnyRole = designations.includes('any');
 
-      let policies = [];
-      // organisation name, department name, designations array
-      if (isAnyOrg && isAnyDept && isAnyRole) {
-        let returnedOrganisation = await this.constructOrganisation('any');
-        let returnedDepartment = await this.constructDepartment('any');
-        returnedDepartment['designations'] = ['any'];
-        let returnedPolicy = await this.policyConstruct(
-          returnedOrganisation,
-          returnedDepartment
-        );
-        // returnedOrganisation['departments'].push({ ...returnedDepartment });
-        // let policy = [
-        //   {
-        //     organisation: {
-        //       name: 'any',
-        //       departments: [
-        //         {
-        //           name: 'any',
-        //           designations: ['any'],
-        //         },
-        //       ],
-        //     },
-        //   },
-        // ];
-        policies.push(returnedPolicy);
-        return;
-      }
+      let policies: any = [];
+
       if (isAnyOrg) {
-        let policies: any = [];
-        let policy: any = new Object();
-        policy['organisation'] = new Object();
         // Map selected departments
-        let organisation: any = new Object();
-        organisation['name'] = 'any';
-        organisation['departments'] = [];
+        let returnedOrganisation = await this.constructOrganisation('any');
         if (isAnyDept) {
-          //organisation['departments'] = [];
-          let department: any = new Object();
-          let roles = JSON.parse(JSON.stringify(designations));
-          department['name'] = 'any';
-          department['designations'] = roles;
-          organisation['departments'].push({ ...department });
-          policy['organisation'] = { ...organisation };
-          policies.push(policy);
+          if (isAnyRole) {
+            let returnedOrganisation = await this.constructOrganisation('any');
+            let returnedDepartment = await this.constructDepartment('any');
+            returnedDepartment['designations'] = ['any'];
+            returnedOrganisation['departments'].push({ ...returnedDepartment });
+            let returnedPolicy = await this.policyConstruct(
+              returnedOrganisation
+            );
+            policies.push(returnedPolicy);
+          } else {
+            let returnedDepartment = await this.constructDepartment('any');
+            let roles = JSON.parse(JSON.stringify(designations));
+            returnedDepartment['designations'] = roles;
+            returnedOrganisation['departments'].push({ ...returnedDepartment });
+            let returnedPolicy = await this.policyConstruct(
+              returnedOrganisation
+            );
+            policies.push(returnedPolicy);
+          }
         } else {
           let departmentNames = await this.getDepartmentNames(departments);
           if (isAnyRole) {
@@ -459,8 +453,14 @@ export class PolicyComponent implements OnInit {
                 departmentNames[i]
               );
               returnedDepartment['designations'] = ['any'];
-              organisation['departments'].push({ ...returnedDepartment });
+              returnedOrganisation['departments'].push({
+                ...returnedDepartment,
+              });
             }
+            let returnedPolicy = await this.policyConstruct(
+              returnedOrganisation
+            );
+            policies.push(returnedPolicy);
           } else {
             designations = [...designations, 'super - aero', 'batman - aero'];
             for (let i = 0; i < departmentNames.length; i++) {
@@ -474,34 +474,135 @@ export class PolicyComponent implements OnInit {
                 return role.split(' - ')[0];
               });
               returnedDepartment['designations'] = [...roles];
-              organisation['departments'].push({ ...returnedDepartment });
+              returnedOrganisation['departments'].push({
+                ...returnedDepartment,
+              });
             }
+            let returnedPolicy = await this.policyConstruct(
+              returnedOrganisation
+            );
+            policies.push(returnedPolicy);
           }
-          policy['organisation'] = JSON.parse(
-            JSON.stringify({ ...organisation })
-          );
-          policies.push(policy);
         }
-        console.log(policies);
-        return;
       } else {
         let organisationNames = await this.getOrganisationNames(organisations);
-        console.log(organisationNames);
+        if (isAnyDept) {
+          if (isAnyRole) {
+            for (let i = 0; i < organisationNames.length; i++) {
+              let returnedOrganisation = await this.constructOrganisation(
+                organisationNames[i]
+              );
+              let returnedDepartment = await this.constructDepartment('any');
+              returnedDepartment['designations'] = ['any'];
+              returnedOrganisation['departments'].push({
+                ...returnedDepartment,
+              });
+              let returnedPolicy = await this.policyConstruct(
+                returnedOrganisation
+              );
+              policies.push(returnedPolicy);
+            }
+          } else {
+            for (let i = 0; i < organisationNames.length; i++) {
+              let returnedOrganisation = await this.constructOrganisation(
+                organisationNames[i]
+              );
+              let returnedDepartment = await this.constructDepartment('any');
+              let roles = JSON.parse(JSON.stringify(designations));
+              returnedDepartment['designations'] = roles;
+              returnedOrganisation['departments'].push({
+                ...returnedDepartment,
+              });
+              let returnedPolicy = await this.policyConstruct(
+                returnedOrganisation
+              );
+              policies.push(returnedPolicy);
+            }
+          }
+        } else {
+          if (isAnyRole) {
+            let departmentNames = await this.getDepartmentNames(departments);
+            for (let i = 0; i < organisationNames.length; i++) {
+              let returnedOrganisation = await this.constructOrganisation(
+                organisationNames[i]
+              );
+              for (let k = 0; k < departmentNames.length; k++) {
+                let returnedDepartment = await this.constructDepartment(
+                  departmentNames[i]
+                );
+                returnedDepartment['designations'] = ['any'];
+                returnedOrganisation['departments'].push({
+                  ...returnedDepartment,
+                });
+              }
+              let returnedPolicy = await this.policyConstruct(
+                returnedOrganisation
+              );
+              policies.push(returnedPolicy);
+            }
+          } else {
+            for (let i = 0; i < organisationNames.length; i++) {
+              let matchedDepartments = await this.removeEmptyPolicies(
+                organisations[i],
+                departments
+              );
+              if (matchedDepartments && matchedDepartments.length > 0) {
+                let returnedOrganisation = await this.constructOrganisation(
+                  organisationNames[i]
+                );
+                let departmentNames = await this.getDepartmentNames(
+                  matchedDepartments
+                );
+                for (let k = 0; k < departmentNames.length; k++) {
+                  let returnedDepartment = await this.constructDepartment(
+                    departmentNames[k]
+                  );
+                  let roles = designations.filter(
+                    (role: string) =>
+                      role.split(' - ').includes(departmentNames[k]) &&
+                      role.split(' - ').includes(organisationNames[i])
+                  );
+                  roles = roles.map((role: string) => {
+                    return role.split(' - ')[0];
+                  });
+                  if (roles.length > 0) {
+                    returnedDepartment['designations'] = [...roles];
+                    returnedOrganisation['departments'].push({
+                      ...returnedDepartment,
+                    });
+                  }
+                }
+                if (returnedOrganisation.departments.length > 0) {
+                  let returnedPolicy = await this.policyConstruct(
+                    returnedOrganisation
+                  );
+                  policies.push(returnedPolicy);
+                }
+              }
+            }
+          }
+        }
       }
+      console.log(policies);
     } catch (error: any) {
       console.log(error);
     }
   }
-  async constructOrganisation(name: string) {
-    let organisation: any = new Object();
-    organisation['name'] = name;
-    organisation['departments'] = [];
-    return organisation;
-  }
-  async constructDepartment(name: string) {
-    let department: any = new Object();
-    department['name'] = name;
-    department['designations'] = [];
-    return department;
+
+  async removeEmptyPolicies(organisation: string, departments: string[]) {
+    try {
+      let departmentids = this.organisationAndDepartmentsStore
+        .filter(
+          (org: any) => org.orgid.toLowerCase() === organisation.toLowerCase()
+        )
+        .map((org: any) => org.departmentids);
+      departmentids = departmentids.flat();
+      let matchedIds: string[] = departments.filter((department: string) =>
+        departmentids.includes(department)
+      );
+      return matchedIds.length > 0 ? matchedIds : [];
+    } catch (error) {
+      console.log(error);
+    }
   }
 }
