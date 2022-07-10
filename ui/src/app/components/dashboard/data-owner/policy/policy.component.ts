@@ -209,6 +209,19 @@ export class PolicyComponent implements OnInit {
       });
     }
   }
+
+  async getOrganisationNames(ids: string[]) {
+    let orgnames: string[] = [];
+    ids.map((id: string) => {
+      this.allOrganisations.map((org: any) => {
+        if (org.orgid.toLowerCase() === id.toLowerCase()) {
+          orgnames.push(org.orgname);
+        }
+      });
+    });
+    return orgnames;
+  }
+
   async getDepartmentNames(ids: string[]) {
     let names: string[] = [];
     ids.map((id: string) => {
@@ -299,7 +312,6 @@ export class PolicyComponent implements OnInit {
           );
           if (found) {
             let { departmentids } = found;
-            console.log(departmentids);
             departmentIds = JSON.parse(
               JSON.stringify([...departmentIds, ...departmentids])
             );
@@ -366,9 +378,16 @@ export class PolicyComponent implements OnInit {
     }
   }
 
-  async policyConstruct() {
+  async policyConstruct(organisation: any, department: any) {
     try {
-    } catch (error) {}
+      let policy: any = new Object();
+      policy['organisation'] = new Object();
+      organisation['departments'].push({ ...department });
+      policy['organisation'] = { ...organisation };
+      return policy;
+    } catch (error) {
+      console.log(error);
+    }
   }
   async onPolicySubmit() {
     try {
@@ -387,22 +406,32 @@ export class PolicyComponent implements OnInit {
       let isAnyOrg = organisations.includes('any');
       let isAnyDept = departments.includes('any');
       let isAnyRole = designations.includes('any');
+
+      let policies = [];
       // organisation name, department name, designations array
       if (isAnyOrg && isAnyDept && isAnyRole) {
-        let policy = [
-          {
-            organisation: {
-              name: 'any',
-              departments: [
-                {
-                  name: 'any',
-                  designations: ['any'],
-                },
-              ],
-            },
-          },
-        ];
-        console.log(policy);
+        let returnedOrganisation = await this.constructOrganisation('any');
+        let returnedDepartment = await this.constructDepartment('any');
+        returnedDepartment['designations'] = ['any'];
+        let returnedPolicy = await this.policyConstruct(
+          returnedOrganisation,
+          returnedDepartment
+        );
+        // returnedOrganisation['departments'].push({ ...returnedDepartment });
+        // let policy = [
+        //   {
+        //     organisation: {
+        //       name: 'any',
+        //       departments: [
+        //         {
+        //           name: 'any',
+        //           designations: ['any'],
+        //         },
+        //       ],
+        //     },
+        //   },
+        // ];
+        policies.push(returnedPolicy);
         return;
       }
       if (isAnyOrg) {
@@ -422,48 +451,53 @@ export class PolicyComponent implements OnInit {
           organisation['departments'].push({ ...department });
           policy['organisation'] = { ...organisation };
           policies.push(policy);
-          return;
         } else {
           let departmentNames = await this.getDepartmentNames(departments);
-          console.log(departmentNames);
-          designations = [...designations, 'super - aero', 'batman - aero'];
-          for (let i = 0; i < departmentNames.length; i++) {
-            let returnedDepartment = await this.constructDepartment(
-              departmentNames[i]
-            );
-            let roles = designations.filter((role: string) =>
-              role.split(' - ').includes(departmentNames[i])
-            );
-            console.log(roles);
+          if (isAnyRole) {
+            for (let i = 0; i < departmentNames.length; i++) {
+              let returnedDepartment = await this.constructDepartment(
+                departmentNames[i]
+              );
+              returnedDepartment['designations'] = ['any'];
+              organisation['departments'].push({ ...returnedDepartment });
+            }
+          } else {
+            designations = [...designations, 'super - aero', 'batman - aero'];
+            for (let i = 0; i < departmentNames.length; i++) {
+              let returnedDepartment = await this.constructDepartment(
+                departmentNames[i]
+              );
+              let roles = designations.filter((role: string) =>
+                role.split(' - ').includes(departmentNames[i])
+              );
+              roles = roles.map((role: string) => {
+                return role.split(' - ')[0];
+              });
+              returnedDepartment['designations'] = [...roles];
+              organisation['departments'].push({ ...returnedDepartment });
+            }
           }
-
-          // for (let i = 0; i < departments.length; i++) {
-          //   let departmentName =
-          //   let department: any = new Object();
-          //   department['name'] = departments[i];
-          //   department['designations'] = [];
-          //   let roles = designations.map((role: string) =>
-          //     role.split(' - ').includes(name)
-          //   );
-          //   console.log(roles);
-          //   for (let k = 0; k < designations.length; k++) {
-          //     if (designations[k].split(' - ').includes(name)) {
-          //       department['designations'].push(
-          //         designations[k].split(' - ')[0]
-          //       );
-          //     }
-          //   }
-          //   console.log(department);
-          //   // console.log(departments);
-          //   // console.log(designations);
-          // }
+          policy['organisation'] = JSON.parse(
+            JSON.stringify({ ...organisation })
+          );
+          policies.push(policy);
         }
+        console.log(policies);
+        return;
+      } else {
+        let organisationNames = await this.getOrganisationNames(organisations);
+        console.log(organisationNames);
       }
     } catch (error: any) {
       console.log(error);
     }
   }
-
+  async constructOrganisation(name: string) {
+    let organisation: any = new Object();
+    organisation['name'] = name;
+    organisation['departments'] = [];
+    return organisation;
+  }
   async constructDepartment(name: string) {
     let department: any = new Object();
     department['name'] = name;
