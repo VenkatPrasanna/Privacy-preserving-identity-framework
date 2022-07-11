@@ -21,11 +21,8 @@ app.use(bodyParser.json());
 
 app.use("/", api);
 
-app.post("/api/addkey", async (req, res) => {
-  let data = req.body;
-  let resp = await getAllKeys();
-  console.log(resp);
-  res.status(200).json({ message: "success" });
+app.get("/api/keybyid", async (req, res) => {
+  console.log(req);
 });
 // app.get("/*", (req, res) => {
 //   //res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));

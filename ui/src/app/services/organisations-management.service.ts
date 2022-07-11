@@ -6,7 +6,7 @@ import Organisations from '../abis/Organisations.json';
   providedIn: 'root',
 })
 export class OrganisationsManagementService {
-  organisationContractAddress = '0x00d96D390e836BBaf0951d7A393a4C58bAceB4b3';
+  organisationContractAddress = '0x5ef8473B116191635B7FeB0913342F16d0BC73f3';
   organisationContract: any;
   constructor(private genericService: GenericService) {
     this.organisationContract = this.genericService.createContract(

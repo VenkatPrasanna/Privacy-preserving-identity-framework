@@ -4,6 +4,7 @@ const {
   generateKey,
   addNewKey,
   getAllKeys,
+  getKeyofData,
 } = require("../../models/key.model");
 
 async function generateAESKey(req, res) {
@@ -13,7 +14,6 @@ async function generateAESKey(req, res) {
 
 async function httpAddKey(req, res) {
   const data = req.body;
-  console.log("data is", data.dataid, data.key);
   if (!data.dataid || !data.key) {
     return res.status(400).json({
       error: "Invalid key parameters",
@@ -26,6 +26,11 @@ async function httpAddKey(req, res) {
   });
 }
 
+async function getKeybyID(req, res) {
+  console.log("req is");
+  console.log(req.body);
+}
+
 async function httpGetAllKeys(req, res) {
   const allkeys = await getAllKeys();
   return res.status(200).json(allkeys);
@@ -35,4 +40,5 @@ module.exports = {
   generateAESKey,
   httpAddKey,
   httpGetAllKeys,
+  getKeybyID,
 };

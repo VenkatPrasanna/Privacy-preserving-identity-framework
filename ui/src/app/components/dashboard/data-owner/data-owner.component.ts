@@ -9,10 +9,6 @@ import { ServerService } from '../../../services/server.service';
 import { ModifyDataComponent } from './modify-data/modify-data.component';
 import { PolicyComponent } from './policy/policy.component';
 
-export interface DialogData {
-  animal: 'panda' | 'unicorn' | 'lion';
-}
-
 export interface DataOwner {
   ownerAddress: string;
   profession: string;
@@ -50,6 +46,9 @@ export class DataOwnerComponent implements OnInit {
 
   displayedColumns: string[] = ['id', 'name', 'value', 'category', 'actions'];
   dataSource: any;
+
+  keyRequestsSource: any;
+  keyRequestsColumns: string[] = ['id', 'requester', 'matchtype', 'actions'];
   @ViewChild(MatTable) table: MatTable<Dataset>;
 
   constructor(
@@ -103,7 +102,6 @@ export class DataOwnerComponent implements OnInit {
   }
 
   updatePolicy(dataid: string) {
-    console.log('update policy', dataid);
     let dialogRef = this.dialog.open(PolicyComponent, {
       height: '500px',
       width: '600px',
@@ -111,6 +109,9 @@ export class DataOwnerComponent implements OnInit {
         dataid: dataid,
       },
       disableClose: true,
+    });
+    dialogRef.afterClosed().subscribe((result: any) => {
+      console.log('policy updated');
     });
   }
 
@@ -124,6 +125,7 @@ export class DataOwnerComponent implements OnInit {
       this.isProfile = false;
       this.isDataSets = false;
       this.isRequests = true;
+      this.getKeyRequests();
     } else if (section === 'dataset') {
       this.isProfile = false;
       this.isRequests = false;
@@ -220,8 +222,28 @@ export class DataOwnerComponent implements OnInit {
     this.dataSource = new MatTableDataSource(datasets);
   }
 
+  async getKeyRequests() {
+    try {
+      let keyrequests = await this.connectService.getKeyRequests();
+      this.keyRequestsSource = new MatTableDataSource(keyrequests);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async approveRequest(element: any) {
+    try {
+      let txn = await this.connectService.approveRequest(
+        element.dataid,
+        element.requesterAddress,
+        element.publicKey
+      );
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
   async getAllkeys() {
-    console.log('all keys');
     let keys = await this.serverService.getAllKeys();
     keys.subscribe((data: any) => {
       console.log(data);

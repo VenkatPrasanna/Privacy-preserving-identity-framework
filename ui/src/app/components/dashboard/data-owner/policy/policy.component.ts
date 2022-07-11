@@ -3,6 +3,8 @@ import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 
 import { OrganisationsManagementService } from 'src/app/services/organisations-management.service';
+import { AlertsService } from 'src/app/services/alerts.service';
+import { PolicyManagementService } from 'src/app/services/policy-management.service';
 
 export interface Organisation {
   orgid: string;
@@ -29,7 +31,9 @@ export class PolicyComponent implements OnInit {
   constructor(
     @Inject(MAT_DIALOG_DATA) private data: any,
     private dialogRef: MatDialogRef<PolicyComponent>,
-    private orgService: OrganisationsManagementService
+    private orgService: OrganisationsManagementService,
+    private alertService: AlertsService,
+    private policyService: PolicyManagementService
   ) {}
 
   ngOnInit(): void {
@@ -373,6 +377,10 @@ export class PolicyComponent implements OnInit {
       let { designations } = this.policyForm.value;
       let isAnyRole = designations.includes('any');
       this.validateIsAnyRole(isAnyRole);
+      if (isAnyRole) {
+        this.policyForm.controls['designations'].setValue(['any']);
+        return;
+      }
     } catch (error: any) {
       console.log(error);
     }
@@ -404,6 +412,7 @@ export class PolicyComponent implements OnInit {
 
   async onPolicySubmit() {
     try {
+      this.isLoading = true;
       let { dataid, organisations, departments, designations } =
         this.policyForm.value;
       if (
@@ -437,6 +446,7 @@ export class PolicyComponent implements OnInit {
             policies.push(returnedPolicy);
           } else {
             let returnedDepartment = await this.constructDepartment('any');
+
             let roles = JSON.parse(JSON.stringify(designations));
             returnedDepartment['designations'] = roles;
             returnedOrganisation['departments'].push({ ...returnedDepartment });
@@ -462,7 +472,6 @@ export class PolicyComponent implements OnInit {
             );
             policies.push(returnedPolicy);
           } else {
-            designations = [...designations, 'super - aero', 'batman - aero'];
             for (let i = 0; i < departmentNames.length; i++) {
               let returnedDepartment = await this.constructDepartment(
                 departmentNames[i]
@@ -473,15 +482,19 @@ export class PolicyComponent implements OnInit {
               roles = roles.map((role: string) => {
                 return role.split(' - ')[0];
               });
-              returnedDepartment['designations'] = [...roles];
-              returnedOrganisation['departments'].push({
-                ...returnedDepartment,
-              });
+              if (roles.length > 0) {
+                returnedDepartment['designations'] = [...roles];
+                returnedOrganisation['departments'].push({
+                  ...returnedDepartment,
+                });
+              }
             }
-            let returnedPolicy = await this.policyConstruct(
-              returnedOrganisation
-            );
-            policies.push(returnedPolicy);
+            if (returnedOrganisation['departments'].length > 0) {
+              let returnedPolicy = await this.policyConstruct(
+                returnedOrganisation
+              );
+              policies.push(returnedPolicy);
+            }
           }
         }
       } else {
@@ -508,37 +521,56 @@ export class PolicyComponent implements OnInit {
                 organisationNames[i]
               );
               let returnedDepartment = await this.constructDepartment('any');
-              let roles = JSON.parse(JSON.stringify(designations));
-              returnedDepartment['designations'] = roles;
-              returnedOrganisation['departments'].push({
-                ...returnedDepartment,
+              let roles = designations.filter((role: string) =>
+                role.split(' - ').includes(organisationNames[i])
+              );
+              roles = roles.map((role: string) => {
+                return role.split(' - ')[0];
               });
-              let returnedPolicy = await this.policyConstruct(
-                returnedOrganisation
-              );
-              policies.push(returnedPolicy);
-            }
-          }
-        } else {
-          if (isAnyRole) {
-            let departmentNames = await this.getDepartmentNames(departments);
-            for (let i = 0; i < organisationNames.length; i++) {
-              let returnedOrganisation = await this.constructOrganisation(
-                organisationNames[i]
-              );
-              for (let k = 0; k < departmentNames.length; k++) {
-                let returnedDepartment = await this.constructDepartment(
-                  departmentNames[i]
-                );
-                returnedDepartment['designations'] = ['any'];
+              if (roles.length > 0) {
+                returnedDepartment['designations'] = [...roles];
                 returnedOrganisation['departments'].push({
                   ...returnedDepartment,
                 });
               }
-              let returnedPolicy = await this.policyConstruct(
-                returnedOrganisation
+              if (returnedOrganisation.departments.length > 0) {
+                let returnedPolicy = await this.policyConstruct(
+                  returnedOrganisation
+                );
+                policies.push(returnedPolicy);
+              }
+            }
+          }
+        } else {
+          if (isAnyRole) {
+            for (let i = 0; i < organisationNames.length; i++) {
+              let matchedDepartments = await this.removeEmptyPolicies(
+                organisations[i],
+                departments
               );
-              policies.push(returnedPolicy);
+              if (matchedDepartments && matchedDepartments.length > 0) {
+                let returnedOrganisation = await this.constructOrganisation(
+                  organisationNames[i]
+                );
+                let departmentNames = await this.getDepartmentNames(
+                  matchedDepartments
+                );
+                for (let k = 0; k < departmentNames.length; k++) {
+                  let returnedDepartment = await this.constructDepartment(
+                    departmentNames[k]
+                  );
+                  returnedDepartment['designations'] = ['any'];
+                  returnedOrganisation['departments'].push({
+                    ...returnedDepartment,
+                  });
+                }
+                if (returnedOrganisation.departments.length > 0) {
+                  let returnedPolicy = await this.policyConstruct(
+                    returnedOrganisation
+                  );
+                  policies.push(returnedPolicy);
+                }
+              }
             }
           } else {
             for (let i = 0; i < organisationNames.length; i++) {
@@ -583,9 +615,22 @@ export class PolicyComponent implements OnInit {
           }
         }
       }
-      console.log(policies);
+      if (policies.length <= 0) {
+        this.alertService.alertErrorMessage('Invalid policy settings');
+        return;
+      }
+      let txnconfirmation = await this.policyService.setPolicy(
+        dataid,
+        JSON.stringify(policies)
+      );
+      if (txnconfirmation.confirmations === 1) {
+        this.isLoading = false;
+        this.alertService.alertSuccessMessage('Policy is added successfully');
+      }
     } catch (error: any) {
       console.log(error);
+      this.isLoading = false;
+      this.alertService.alertErrorMessage('Failed to set a policy');
     }
   }
 

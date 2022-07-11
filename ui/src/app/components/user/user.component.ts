@@ -53,15 +53,19 @@ export class UserComponent implements OnInit {
       profession = this.genericService.stringToBytes(profession);
       location = this.genericService.stringToBytes(location);
       let connecteduser = await this.genericService.getConnectedUser();
-      let txn = await this.connectService.addOwner(
+      let txnConfirmation = await this.connectService.addOwner(
         connecteduser,
         profession,
         location
       );
-      console.log(txn);
-    } catch (error) {
+      if (txnConfirmation.confirmations === 1) {
+        this.isLoading = false;
+        this.alertService.alertSuccessMessage('Request submitted successfully');
+      }
+    } catch (error: any) {
       this.isLoading = false;
       console.log(error);
+      this.alertService.alertErrorMessage(error.message);
     }
   }
 
@@ -90,6 +94,7 @@ export class UserComponent implements OnInit {
     } catch (error: any) {
       console.log(error);
       this.isLoading = false;
+      this.alertService.alertErrorMessage(error.message);
     }
   }
 

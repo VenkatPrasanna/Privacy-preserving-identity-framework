@@ -24,8 +24,13 @@ async function getAllKeys() {
   return await keysdb.find({});
 }
 
+async function getKeyofData(id) {
+  return await keysdb.findOne({ dataid: id });
+}
+
 module.exports = {
   generateKey,
   addNewKey,
   getAllKeys,
+  getKeyofData,
 };

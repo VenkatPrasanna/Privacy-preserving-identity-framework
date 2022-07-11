@@ -18,7 +18,6 @@ import { GenericService } from './generic.service';
 import { OrganisationsManagementService } from './organisations-management.service';
 import Users from '../abis/Users.json';
 import Data from '../abis/Data.json';
-import Organisations from '../abis/Organisations.json';
 
 declare let window: any;
 
@@ -33,7 +32,7 @@ export interface DataRequester {
   requesterAddress: string;
   organisation: string;
   department: string;
-  location: string;
+  designation: string;
   approved: boolean;
 }
 
@@ -44,8 +43,8 @@ export class ConnectService {
   ethereum = window.ethereum;
   durationInSeconds: Number = 5;
 
-  userContractAddress = '0xA47C192b094c68CB3d58f56314FDb328a0b809f1';
-  dataContractAddress = '0xd4Ede2d007D93470D5Ed44d41c2b330095D13C6c';
+  userContractAddress = '0x61DE6Fc675D07b227116DeFB970A0Dfb18b0a6f3';
+  dataContractAddress = '0xb5D73fFc4c6Be887658c74F80388686D2281d2e0';
 
   userContract: any;
   dataContract: any;
@@ -105,9 +104,9 @@ export class ConnectService {
       );
       // console.log(`Loading - ${transactionHash.hash}`);
 
-      await transactionHash.wait();
+      let txnconfirmation = await transactionHash.wait();
       //console.log(`Success - ${transactionHash.hash}`);
-      this.alertService.alertSuccessMessage('Request submitted successfully');
+      return txnconfirmation;
     } catch (error: any) {
       console.log(error);
       this.alertService.alertErrorMessage(error.data.message);
@@ -174,7 +173,6 @@ export class ConnectService {
       let datavalue = this.genericService.stringToBytes(value);
       let datacategory = this.genericService.stringToBytes(category);
       let datacontract = await this.dataContract;
-      console.log(dataname, datavalue, datacategory);
       let transactionHash = await datacontract.addData(
         id,
         dataname,
@@ -253,7 +251,7 @@ export class ConnectService {
         requesterAddress: requester.requesterAddress.toString(),
         organisation: this.genericService.bytesToString(requester.organisation),
         department: this.genericService.bytesToString(requester.department),
-        location: this.genericService.bytesToString(requester.designation),
+        designation: this.genericService.bytesToString(requester.designation),
         approved: requester.approved,
       };
       return structuredRequester;
@@ -262,18 +260,164 @@ export class ConnectService {
       throw error;
     }
   }
-  // async getEncryptionkey() {
-  //   let user = await this.getConnectedUser();
-  //   console.log(user);
-  //   const keyb64 = (await this.ethereum.request({
-  //     method: 'eth_getEncryptionPublicKey',
-  //     params: [user],
-  //   })) as string;
-  //   const publicKey = Buffer.from(keyb64, 'base64');
-  //   this.encryptionKey = publicKey;
-  //   console.log(publicKey);
-  // }
 
+  async getAllDatasets() {
+    try {
+      let datacontract = await this.dataContract;
+      let dataevents = await datacontract.queryFilter('DatasetAdded');
+      let structuredEvents = dataevents.map((event: any) => {
+        let [id, name, category] = [...event.args];
+        return {
+          dataid: id,
+          name: this.genericService.bytesToString(name),
+          category: this.genericService.bytesToString(category),
+        };
+      });
+      return structuredEvents;
+    } catch (error: any) {
+      console.log(error);
+    }
+  }
+  async getPublickey() {
+    let user = await this.genericService.getConnectedUser();
+    const keyb64 = (await this.ethereum.request({
+      method: 'eth_getEncryptionPublicKey',
+      params: [user],
+    })) as string;
+    // console.log(keyb64);
+    // const publicKey = Buffer.from(keyb64, 'base64');
+    // this.encryptionKey = publicKey;
+    return keyb64;
+  }
+
+  async submitKeyRequest(dataid: string, ownerAddress: string, type: string) {
+    try {
+      let datacontract = await this.dataContract;
+      let publickey = await this.getPublickey();
+      type = this.genericService.stringToBytes(type);
+      publickey = this.genericService.stringToBytes(publickey.toString());
+      let txn = await datacontract.requestKey(
+        dataid,
+        ownerAddress,
+        type,
+        publickey
+      );
+      console.log(txn);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async getKeyRequests() {
+    try {
+      let datacontract = await this.dataContract;
+      let dataevents = await datacontract.queryFilter('KeyRequested');
+      let structuredEvents = dataevents.map((event: any) => {
+        let [id, _, requesterAddress, accessType, publicKey] = [...event.args];
+        return {
+          dataid: id,
+          requesterAddress: requesterAddress,
+          accessType: this.genericService.bytesToString(accessType),
+          publicKey: this.genericService.bytesToString(publicKey),
+        };
+      });
+      return structuredEvents;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async approveRequest(
+    dataid: string,
+    requeterAddress: string,
+    publicKey: string
+  ) {
+    try {
+      let datacontract = await this.dataContract;
+      let key = await this.serverService.getAllKeys();
+      key.subscribe(async (keys: any) => {
+        let matchedDataItem = keys.find((key: any) => key.dataid === dataid);
+        let encryptedKey: any = await this.encryptData(
+          matchedDataItem.key,
+          publicKey
+        );
+        encryptedKey = this.genericService.stringToBytes(
+          JSON.stringify(encryptedKey)
+        );
+        let txn = await datacontract.approveKeyRequest(
+          dataid,
+          requeterAddress,
+          encryptedKey
+        );
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async encryptData(datakey: string, publicKey: string) {
+    try {
+      const enc = encrypt({
+        publicKey: publicKey,
+        data: datakey,
+        version: 'x25519-xsalsa20-poly1305',
+      });
+      return enc;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async getDecryptionkey() {
+    try {
+      let datacontract = await this.dataContract;
+      let approvedRequests = await datacontract.queryFilter(
+        'ApproveKeyRequest'
+      );
+
+      let structuredEvents = approvedRequests.map((event: any) => {
+        let [id, requesterAddress, key] = [...event.args];
+        return {
+          dataid: id,
+          requesterAddress: requesterAddress,
+          publicKey: this.genericService.bytesToString(key),
+        };
+      });
+      let event = structuredEvents[0];
+      let parsedkey = JSON.parse(event.publicKey);
+      let data = await this.decryptData(parsedkey);
+
+      let bytes = CryptoJS.AES.decrypt(
+        'U2FsdGVkX19BoheaGoNd3Gv3VVy8mhON6/KTQdbzVFE3u9BpiShluaxuJvWe6qt/',
+        data
+      );
+      let originalText = bytes.toString(CryptoJS.enc.Utf8);
+      console.log(originalText);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async decryptData(parsedkey: any) {
+    const structuredData = {
+      version: 'x25519-xsalsa20-poly1305',
+      ephemPublicKey: parsedkey.ephemPublicKey,
+      nonce: parsedkey.nonce,
+      ciphertext: parsedkey.ciphertext,
+    };
+
+    const ct = `0x${Buffer.from(
+      JSON.stringify(structuredData),
+      'utf8'
+    ).toString('hex')}`;
+
+    let user = await this.genericService.getConnectedUser();
+    const decrypt = await window.ethereum.request({
+      method: 'eth_decrypt',
+      params: [ct, user],
+    });
+    return decrypt;
+  }
   // async encryptData() {
   //   let data1 = 'VenkatPravas';
   //   let data2 = 'lakshmi';

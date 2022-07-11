@@ -19,7 +19,22 @@ contract Data is Users {
     event DatasetAdded(
         string id,
         bytes32 name,
-        bytes32 category
+        bytes32 category,
+        address ownerAddress
+    );
+
+    event KeyRequested(
+        string dataid,
+        address indexed ownerAddress,
+        address indexed requesterAddress,
+        bytes32 accessType,
+        bytes publicKey
+    );
+
+    event ApproveKeyRequest(
+        string dataid,
+        address indexed requesterAddress,
+        bytes key
     );
 
     // mapping for user related data item
@@ -43,6 +58,11 @@ contract Data is Users {
         _;
     }
 
+    modifier onlyDataRequester(address ownerAddress) {
+        require(usersContractInstance.getDataRequester(ownerAddress).requesterAddress == ownerAddress, "Invalid action");
+        _;
+    }
+
     modifier isOwnerOfDataset(address ownerAddress, string memory id) {
         require(dataOwnerMap[id] == ownerAddress, "Invalid operation");
         _; 
@@ -53,7 +73,7 @@ contract Data is Users {
         //userDataKey[msg.sender][id] = key;
         dataOwnerMap[id] = msg.sender; 
         allUserData[msg.sender].push(Dataset(id, msg.sender, name, value, category));
-        emit DatasetAdded(id, name, category);
+        emit DatasetAdded(id, name, category, msg.sender);
     }
 
     function updateData(string memory id, bytes32 name, bytes memory value, bytes32 category) external isOwnerOfDataset(msg.sender, id) {
@@ -64,16 +84,26 @@ contract Data is Users {
                 allUserData[msg.sender][i] = Dataset(id, msg.sender, name, value, category);
             }
         }
-        emit DatasetAdded(id, name, category);
+        emit DatasetAdded(id, name, category, msg.sender);
     }
 
     function getUserData() external view returns(Dataset[] memory) {
         return allUserData[msg.sender];
     }
 
-    function getSingleDataItem(string memory id) external view returns(Dataset memory) {
+    function getSingleDataItem(string memory id) external isOwnerOfDataset(msg.sender, id) view returns(Dataset memory) {
         return userSpecificData[msg.sender][id];
     }
+
+    function requestKey(string memory dataid, address ownerAddress, bytes32 accessType, bytes memory publicKey) external onlyDataRequester(msg.sender) {
+        emit KeyRequested(dataid, ownerAddress, msg.sender, accessType, publicKey);
+    }
+
+    function approveKeyRequest(string memory dataid, address requesterAddress, bytes memory key) external onlyDataOwner(msg.sender) {
+        emit ApproveKeyRequest(dataid, requesterAddress, key);
+    }
+
+
 
     // function getKey(string memory id) external isOwnerOfDataset(msg.sender, id) view returns(bytes32) {
     //     return userDataKey[msg.sender][id];
