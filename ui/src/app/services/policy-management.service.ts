@@ -6,7 +6,7 @@ import Policies from '../abis/Policies.json';
   providedIn: 'root',
 })
 export class PolicyManagementService {
-  policyContractAddress = '0x8eDd13A15c1DFf87440fe8e7a0D23341951Ae802';
+  policyContractAddress = '0xF65151C898962FAE174B4ec7e4A67755Ecd4C505';
   policyContract: any;
   constructor(private genericService: GenericService) {
     this.policyContract = this.genericService.createContract(

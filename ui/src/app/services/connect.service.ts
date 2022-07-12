@@ -43,8 +43,8 @@ export class ConnectService {
   ethereum = window.ethereum;
   durationInSeconds: Number = 5;
 
-  userContractAddress = '0x61DE6Fc675D07b227116DeFB970A0Dfb18b0a6f3';
-  dataContractAddress = '0xb5D73fFc4c6Be887658c74F80388686D2281d2e0';
+  userContractAddress = '0x0d9F99C4c7Fc9647bdaBAbfB3c44bf6608568A8d';
+  dataContractAddress = '0x17FcE12222f38458C31cF7829955F2E16CBe790e';
 
   userContract: any;
   dataContract: any;
@@ -388,7 +388,7 @@ export class ConnectService {
       let data = await this.decryptData(parsedkey);
 
       let bytes = CryptoJS.AES.decrypt(
-        'U2FsdGVkX19BoheaGoNd3Gv3VVy8mhON6/KTQdbzVFE3u9BpiShluaxuJvWe6qt/',
+        'U2FsdGVkX1/f0WIBMtVWWf7CNMTWOeb1B9WOROmBm1BC1PCrLtV77EiMIUw6nXyYA2/Duz+dM0INEfEkO8x3MA==',
         data
       );
       let originalText = bytes.toString(CryptoJS.enc.Utf8);

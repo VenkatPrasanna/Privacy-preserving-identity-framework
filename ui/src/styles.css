@@ -25,3 +25,7 @@ body {
 .userheading p {
   margin: 0;
 }
+
+.mat-column-value {
+  width: 50px !important;
+}
