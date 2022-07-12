@@ -7,7 +7,6 @@ contract Users {
 
     struct Owner {
         address ownerAddress;
-        //uint role;
         bytes32 profession;
         bytes32 location;
         bool approved;
@@ -21,19 +20,12 @@ contract Users {
         bool approved;
     }
 
-    struct User {
-        address userAddress;
-        uint role;
-        //bool approved;
-    }
-
     constructor() {
         superadmin = msg.sender;
-        allUsers.push(User(superadmin, 3));
+       // allUsers.push(User(superadmin, 3));
+        userToRole[msg.sender] = 3;
         //organisationInstance = Organisations(orgcontractAddress);
     }
-
-    User[] allUsers;
 
     // modifiers
     modifier isUserExists(address userAddress) {
@@ -48,72 +40,40 @@ contract Users {
         _;
     }
 
-    // modifier onlyRequester(address senderAddress) {
-    //     require(requesters);
-    // }
-
     // Events goes here
-    event NewOwnerCreated(
-        address ownerAddress,
-        bytes32 profession,
-        bytes32 location,
-        bool approved
-    );
-
-    event UpdateDataOwner(
-        address ownerAddress,
-        bytes32 profession,
-        bytes32 location,
-        bool approved
-    );
-
-    event NewRequesterCreated(
-        address requesterAddress,
-        bytes32 organisation,
-        bytes32 department,
-        bytes32 designation,
-        bool approved
-    );
-
-    event UpdateDataRequester(
-        address requesterAddress,
-        bytes32 organisation,
-        bytes32 department,
-        bytes32 designation,
+    event UserUpdated(
+        address userAddress,
         bool approved
     );
 
     //mapping owner address to owner struct
     mapping(address => Owner) owners;
     mapping(address => Requester) requesters;
+    mapping(address => uint) userToRole;
 
     // Function to add data owners
     function addDataOwner(address ownerAddress, bytes32 profession, bytes32 location) public isUserExists(ownerAddress) {
         owners[ownerAddress] = Owner(ownerAddress, profession, location, false);
-        allUsers.push(User(ownerAddress, 1));
-        emit NewOwnerCreated(ownerAddress, profession, location, false);
+        userToRole[ownerAddress] = 1;
+        emit UserUpdated(ownerAddress, false);
     }
 
     function addDataRequester(address requesterAddress, bytes32 organisation, bytes32 department, bytes32 designation) public isUserExists(requesterAddress) {
         requesters[requesterAddress] = Requester(requesterAddress, organisation, department, designation, false);
-        allUsers.push(User(requesterAddress, 2));
-        //organisationInstance.addOrganisation(organisation, department, designation);
-        emit NewRequesterCreated(requesterAddress, organisation, department, designation, false);
+        userToRole[requesterAddress] = 2;
+        emit UserUpdated(requesterAddress, false);
     }
 
     function updateDataOwner(address ownerAddress, bytes32 profession, bytes32 location) public {
         require(owners[ownerAddress].ownerAddress == msg.sender, "Invalid user operation");
         owners[ownerAddress] = Owner(ownerAddress, profession, location, false);
-        emit UpdateDataOwner(ownerAddress, profession, location, false);
+        emit UserUpdated(ownerAddress, false);
     }
 
     function updateDataRequester(address requesterAddress, bytes32 organisation, bytes32 department, bytes32 designation) public {
         require(requesters[requesterAddress].requesterAddress == msg.sender, "Invalid user operation");
-        requesters[requesterAddress].organisation = organisation;
-        requesters[requesterAddress].department = department;
-        requesters[requesterAddress].designation = designation;
-        requesters[requesterAddress].approved = false;
-        emit UpdateDataRequester(requesterAddress, organisation, department, designation, false);
+        requesters[requesterAddress] = Requester(requesterAddress, organisation, department, designation, false);
+        emit UserUpdated(requesterAddress, false);
     }
 
     function getDataOwner(address ownerAddress) public view returns(Owner memory) {
@@ -128,15 +88,17 @@ contract Users {
         return superadmin;
     }
 
+    function getUserRole(address userAddress) public view returns (uint) {
+        return userToRole[userAddress];
+    }
+
     function approveOwner(address ownerAddress) public onlySuperAdmin(msg.sender) {
         owners[ownerAddress].approved = true;
+        emit UserUpdated(ownerAddress, true);
     }
 
     function approveRequester(address requesterAddress) public onlySuperAdmin(msg.sender) {
         requesters[requesterAddress].approved = true;
-    }
-
-    function getAllUsers() public view returns(User[] memory) {
-        return allUsers;
+        emit UserUpdated(requesterAddress, true);
     }
 }

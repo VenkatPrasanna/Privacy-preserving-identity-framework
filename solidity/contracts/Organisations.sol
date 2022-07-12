@@ -49,19 +49,6 @@ contract Organisations is Users {
         _;
     }
 
-    // this function is copied from https://ethereum.stackexchange.com/questions/9142/how-to-convert-a-string-to-bytes32
-    // to make it possible to use ERC725 functions
-    function stringToBytes32(string memory source) public pure returns (bytes32 result) {
-        bytes memory tempEmptyStringTest = bytes(source);
-        if (tempEmptyStringTest.length == 0) {
-            return 0x0;
-        }
-
-        assembly {
-            result := mload(add(source, 32))
-        }
-    }
-
     // Generic functions
     //https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/Strings.sol
 
@@ -98,14 +85,12 @@ contract Organisations is Users {
     function createOrganisation(bytes32 name, bytes32 departmentName, bytes32 designation, bool isAddDesignation) external {
         organisationCounter = organisationCounter + 1;
         string memory orgid = makeId(organisationCounter, "org");
-        //bytes32 orgid = stringToBytes32(oid);
         organisations[orgid].orgid = orgid;
         organisations[orgid].orgname = name;
 
         uint deptlength = organisations[orgid].totalDepartments + 1;
         string memory odid = string(abi.encodePacked(orgid, "dep"));
         string memory finaldid = makeId(deptlength, odid);
-        //bytes32 finaldid = stringToBytes32(did); 
         organisations[orgid].totalDepartments++;
         organisations[orgid].departmentids.push(finaldid);
         departments[finaldid].depid = finaldid;
