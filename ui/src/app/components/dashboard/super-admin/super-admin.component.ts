@@ -1,26 +1,16 @@
-import { Component, OnInit } from '@angular/core';
-import { MatTableDataSource } from '@angular/material/table';
+import { Component, OnInit, ViewChild } from '@angular/core';
+import { MatTable, MatTableDataSource } from '@angular/material/table';
 import { ConnectService } from '../../../services/connect.service';
+import { GenericService } from 'src/app/services/generic.service';
+import { UserManagementService } from 'src/app/services/user-management.service';
+import { AlertsService } from 'src/app/services/alerts.service';
+import { OrganisationsManagementService } from 'src/app/services/organisations-management.service';
 
-export interface PeriodicElement {
-  name: string;
-  position: number;
-  weight: number;
-  symbol: string;
+export interface UserRequests {
+  userAddress: string;
+  userType: Number;
+  approved: boolean;
 }
-
-const ELEMENT_DATA: PeriodicElement[] = [
-  { position: 1, name: 'Hydrogen', weight: 1.0079, symbol: 'H' },
-  { position: 2, name: 'Helium', weight: 4.0026, symbol: 'He' },
-  { position: 3, name: 'Lithium', weight: 6.941, symbol: 'Li' },
-  { position: 4, name: 'Beryllium', weight: 9.0122, symbol: 'Be' },
-  { position: 5, name: 'Boron', weight: 10.811, symbol: 'B' },
-  { position: 6, name: 'Carbon', weight: 12.0107, symbol: 'C' },
-  { position: 7, name: 'Nitrogen', weight: 14.0067, symbol: 'N' },
-  { position: 8, name: 'Oxygen', weight: 15.9994, symbol: 'O' },
-  { position: 9, name: 'Fluorine', weight: 18.9984, symbol: 'F' },
-  { position: 10, name: 'Neon', weight: 20.1797, symbol: 'Ne' },
-];
 
 @Component({
   selector: 'app-super-admin',
@@ -28,26 +18,189 @@ const ELEMENT_DATA: PeriodicElement[] = [
   styleUrls: ['./super-admin.component.css'],
 })
 export class SuperAdminComponent implements OnInit {
-  owners: any;
-  requesters: any;
-  displayedColumns: string[] = ['address', 'profession', 'location', 'actions'];
+  isLoading: boolean = false;
+  isAttributeLoading: boolean = false;
+  displayedColumns: string[] = ['address', 'type', 'status', 'actions'];
   dataSource: any;
-  constructor(private connectService: ConnectService) {}
+  superAdmin: string;
+  isProfile: boolean = true;
+  isRequests: boolean = false;
+  isRevoke: boolean = false;
+  userWaitingForApproval: any = {
+    userType: 0,
+  };
+
+  @ViewChild(MatTable) table: MatTable<UserRequests>;
+
+  constructor(
+    private connectService: ConnectService,
+    private genericService: GenericService,
+    private usersService: UserManagementService,
+    private alertService: AlertsService,
+    private orgService: OrganisationsManagementService
+  ) {}
 
   ngOnInit(): void {
-    this.getOwnerApprovalRequests();
+    this.getSuperAdmin();
   }
 
-  async getOwnerApprovalRequests() {
-    this.owners = await this.connectService.getOwnerApprovalRequests();
-    this.dataSource = new MatTableDataSource(this.owners);
+  updateView(section: string) {
+    if (section === 'profile') {
+      this.isProfile = true;
+      this.isRevoke = false;
+      this.isRequests = false;
+    } else if (section === 'requests') {
+      this.isProfile = false;
+      this.isRevoke = false;
+      this.isRequests = true;
+      if (!this.dataSource) {
+        this.getUserApprovalRequests();
+      }
+    } else if (section === 'revoke') {
+      this.isProfile = false;
+      this.isRequests = false;
+      this.isRevoke = true;
+    }
   }
 
-  async approve(address: string) {
-    console.log(address);
+  async getSuperAdmin() {
+    this.superAdmin = await this.genericService.getConnectedUser();
   }
 
-  async getEncryptionkey() {}
+  async getUserApprovalRequests() {
+    try {
+      this.isLoading = true;
+      let datasets = await this.usersService.getUserApprovalRequests();
+      this.dataSource = new MatTableDataSource(datasets);
+      this.isLoading = false;
+    } catch (error) {
+      console.log(error);
+      this.isLoading = false;
+    }
+  }
+
+  async getUserDetails(element: UserRequests) {
+    try {
+      this.isAttributeLoading = true;
+      let returnedAttributes = await this.usersService.getUserDetails(element);
+      this.userWaitingForApproval = {
+        ...returnedAttributes,
+        userType: element.userType,
+      };
+      this.isAttributeLoading = false;
+    } catch (error) {
+      console.log(error);
+      this.isAttributeLoading = false;
+    }
+  }
+
+  async findOrganisation(orgname: string) {
+    try {
+      let returnedOrganisations = await this.orgService.getAllOrganisations();
+      let isOrgPresent = returnedOrganisations.find(
+        (org: any) => org.orgname.toLowerCase() === orgname.toLowerCase()
+      );
+      return isOrgPresent;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async findAndAddOrganisation(user: any) {
+    // Get all orgs, validate is org present, get org departments, inlcueds designations
+    let isOrgPresent = await this.findOrganisation(user.organisation);
+    let alldesignations = await this.orgService.getAllDesignations();
+    let isToAddDesignation = alldesignations.includes(user.designation);
+    let organisation = this.genericService.stringToBytes(
+      user.organisation.toLowerCase()
+    );
+    let department = this.genericService.stringToBytes(
+      user.department.toLowerCase()
+    );
+    let designation = this.genericService.stringToBytes(
+      user.designation.toLowerCase()
+    );
+    if (isOrgPresent) {
+      // Organisation is present so get departments of ths=is organisation and validate for the department presence
+      let returnedOrganisation =
+        await this.orgService.organisationSpecificDepartments(
+          isOrgPresent.orgid
+        );
+      let { departmentids } = returnedOrganisation;
+      let returnedDepartments = departmentids.map(async (depid: string) => {
+        let department = await this.orgService.getDepartmentDetails(depid);
+        return department;
+      });
+      let isDepFound = returnedDepartments.find(
+        (department: any) =>
+          department.depname.toLowerCase() === user.department.toLowerCase()
+      );
+      if (isDepFound) {
+        let roleaddconfirmation =
+          await this.orgService.addDesignationToDepartment(
+            isDepFound.depid,
+            designation,
+            isToAddDesignation
+          );
+        if (roleaddconfirmation.confirmations === 1) {
+          this.alertService.alertSuccessMessage(
+            'Organisations updated successfully'
+          );
+        }
+      } else {
+        let depaddconfirmation = await this.orgService.addDeptToOrganisation(
+          isOrgPresent.orgid,
+          department,
+          designation,
+          isToAddDesignation
+        );
+        if (depaddconfirmation.confirmations === 1) {
+          this.alertService.alertSuccessMessage(
+            'Organisations updated successfully'
+          );
+        }
+      }
+    } else {
+      let orgaddconfirmation = await this.orgService.createOrganisation(
+        organisation,
+        department,
+        designation,
+        isToAddDesignation
+      );
+      if (orgaddconfirmation.confirmations === 1) {
+        this.alertService.alertSuccessMessage(
+          'Organisations updated successfully'
+        );
+      }
+    }
+  }
+
+  async approveUser(user: any) {
+    try {
+      console.log(user);
+      this.isAttributeLoading = true;
+      if (user.userType === 2) {
+        await this.findAndAddOrganisation(user);
+      }
+
+      let txnconfirmation = await this.usersService.approveUser(user);
+      if (txnconfirmation.confirmations === 1) {
+        this.isAttributeLoading = false;
+        this.userWaitingForApproval = JSON.parse(
+          JSON.stringify({ userType: 0 })
+        );
+        this.getUserApprovalRequests();
+        this.alertService.alertSuccessMessage('User approved successfully');
+      }
+    } catch (error) {
+      console.log(error);
+      this.isAttributeLoading = false;
+    }
+  }
+
+  cancelApproval() {
+    this.userWaitingForApproval = JSON.parse(JSON.stringify({ userType: 0 }));
+  }
 
   applyFilter(event: Event) {
     const filterValue = (event.target as HTMLInputElement).value;

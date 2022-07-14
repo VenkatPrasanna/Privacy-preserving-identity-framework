@@ -21,21 +21,6 @@ import Data from '../abis/Data.json';
 
 declare let window: any;
 
-export interface DataOwner {
-  ownerAddress: string;
-  profession: string;
-  location: string;
-  approved: boolean;
-}
-
-export interface DataRequester {
-  requesterAddress: string;
-  organisation: string;
-  department: string;
-  designation: string;
-  approved: boolean;
-}
-
 @Injectable({
   providedIn: 'root',
 })
@@ -43,10 +28,8 @@ export class ConnectService {
   ethereum = window.ethereum;
   durationInSeconds: Number = 5;
 
-  userContractAddress = '0x0d9F99C4c7Fc9647bdaBAbfB3c44bf6608568A8d';
-  dataContractAddress = '0x17FcE12222f38458C31cF7829955F2E16CBe790e';
+  dataContractAddress = '0x70f5d4cb7fD245235752741056C127568c90300D';
 
-  userContract: any;
   dataContract: any;
   policiesContract: any;
 
@@ -55,14 +38,8 @@ export class ConnectService {
     private _snackBar: MatSnackBar,
     private alertService: AlertsService,
     private serverService: ServerService,
-    private genericService: GenericService,
-    private orgService: OrganisationsManagementService
+    private genericService: GenericService
   ) {
-    this.userContract = this.createContract(
-      this.userContractAddress,
-      Users.abi
-    );
-
     this.dataContract = this.createContract(this.dataContractAddress, Data.abi);
 
     //this.getEncryptionkey();
@@ -78,93 +55,6 @@ export class ConnectService {
     } catch (error) {
       console.log(error);
     }
-  }
-
-  async getAllUsers() {
-    let usercontract = await this.userContract;
-    let users = await usercontract.getAllUsers();
-    let structuredUsers = users.map((user: any) => ({
-      address: user.userAddress,
-      role: ethers.BigNumber.from(user.role).toNumber(),
-      //approved: user.approved,
-    }));
-
-    return structuredUsers;
-  }
-
-  // Data owner related opertaions
-  async addOwner(address: string, profession: string, location: string) {
-    try {
-      let usercontract = await this.userContract;
-
-      let transactionHash = await usercontract.addDataOwner(
-        address,
-        profession,
-        location
-      );
-      // console.log(`Loading - ${transactionHash.hash}`);
-
-      let txnconfirmation = await transactionHash.wait();
-      //console.log(`Success - ${transactionHash.hash}`);
-      return txnconfirmation;
-    } catch (error: any) {
-      console.log(error);
-      this.alertService.alertErrorMessage(error.data.message);
-    }
-  }
-
-  async updateDataOwner(address: string, profession: string, location: string) {
-    try {
-      let usercontract = await this.userContract;
-
-      let transactionHash = await usercontract.updateDataOwner(
-        address,
-        profession,
-        location
-      );
-      // console.log(`Loading - ${transactionHash.hash}`);
-
-      await transactionHash.wait();
-      //console.log(`Success - ${transactionHash.hash}`);
-      this.alertService.alertSuccessMessage('Request submitted successfully');
-    } catch (error: any) {
-      console.log(error);
-      this.alertService.alertErrorMessage(error.data.message);
-    }
-  }
-
-  async getDataOwnerDetails(): Promise<DataOwner> {
-    try {
-      let usercontract = await this.userContract;
-      let connecteduser = await this.genericService.getConnectedUser();
-      let owner = await usercontract.getDataOwner(connecteduser);
-
-      let structuredOwner = {
-        ownerAddress: owner.ownerAddress,
-        profession: this.genericService.bytesToString(owner.profession),
-        location: this.genericService.bytesToString(owner.location),
-        approved: owner.approved,
-      };
-      return structuredOwner;
-    } catch (error: any) {
-      console.log(error);
-      this.alertService.alertErrorMessage(error.data.message);
-      throw error;
-    }
-  }
-
-  async getOwnerApprovalRequests() {
-    let usercontract = await this.userContract;
-    let nevents = await usercontract.queryFilter('NewOwnerCreated');
-    let structuredEvents = nevents.map((event: any) => {
-      let [ownerAddress, profession, location, approved] = [...event.args];
-      return {
-        ownerAddress: ownerAddress,
-        profession: this.genericService.bytesToString(profession),
-        location: this.genericService.bytesToString(location),
-      };
-    });
-    return structuredEvents;
   }
 
   async addDataset(id: string, name: string, value: string, category: string) {
@@ -214,53 +104,6 @@ export class ConnectService {
     }
   }
 
-  async addRequester(
-    address: string,
-    organisation: string,
-    department: string,
-    designation: string
-  ) {
-    try {
-      let usercontract = await this.userContract;
-      let transactionHash = await usercontract.addDataRequester(
-        address,
-        organisation,
-        department,
-        designation
-      );
-
-      let txnconfirmation = await transactionHash.wait();
-      await this.orgService.createOrganisation(
-        organisation,
-        department,
-        designation
-      );
-      return txnconfirmation;
-    } catch (error: any) {
-      console.log(error.message);
-      this.alertService.alertErrorMessage(error.message);
-    }
-  }
-
-  async getRequesterDetails(): Promise<DataRequester> {
-    try {
-      let usercontract = await this.userContract;
-      let connecteduser = await this.genericService.getConnectedUser();
-      let requester = await usercontract.getDataRequester(connecteduser);
-      let structuredRequester = {
-        requesterAddress: requester.requesterAddress.toString(),
-        organisation: this.genericService.bytesToString(requester.organisation),
-        department: this.genericService.bytesToString(requester.department),
-        designation: this.genericService.bytesToString(requester.designation),
-        approved: requester.approved,
-      };
-      return structuredRequester;
-    } catch (error) {
-      console.log(error);
-      throw error;
-    }
-  }
-
   async getAllDatasets() {
     try {
       let datacontract = await this.dataContract;
@@ -278,6 +121,7 @@ export class ConnectService {
       console.log(error);
     }
   }
+
   async getPublickey() {
     let user = await this.genericService.getConnectedUser();
     const keyb64 = (await this.ethereum.request({

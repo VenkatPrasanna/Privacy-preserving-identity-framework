@@ -3,6 +3,7 @@ import { FormGroup, Validators, FormControl } from '@angular/forms';
 import { GenericService } from '../../services/generic.service';
 import { ConnectService } from '../../services/connect.service';
 import { AlertsService } from '../../services/alerts.service';
+import { UserManagementService } from 'src/app/services/user-management.service';
 
 export interface UserType {
   id: Number;
@@ -28,7 +29,8 @@ export class UserComponent implements OnInit {
   constructor(
     private genericService: GenericService,
     private connectService: ConnectService,
-    private alertService: AlertsService
+    private alertService: AlertsService,
+    private usersService: UserManagementService
   ) {}
 
   ngOnInit(): void {
@@ -50,20 +52,22 @@ export class UserComponent implements OnInit {
       this.isLoading = true;
       let { profession, location } = this.ownerRegistrationForm.value;
       if (!profession || !location) return;
-      profession = this.genericService.stringToBytes(profession);
-      location = this.genericService.stringToBytes(location);
+      profession = this.genericService.stringToBytes(profession.toLowerCase());
+      location = this.genericService.stringToBytes(location.toLowerCase());
       let connecteduser = await this.genericService.getConnectedUser();
-      let txnConfirmation = await this.connectService.addOwner(
+      let txnConfirmation = await this.usersService.addOwner(
         connecteduser,
         profession,
         location
       );
       if (txnConfirmation.confirmations === 1) {
         this.isLoading = false;
+        this.resetForms();
         this.alertService.alertSuccessMessage('Request submitted successfully');
       }
     } catch (error: any) {
       this.isLoading = false;
+      this.resetForms();
       console.log(error);
       this.alertService.alertErrorMessage(error.message);
     }
@@ -81,7 +85,7 @@ export class UserComponent implements OnInit {
       department = this.genericService.stringToBytes(department.toLowerCase());
       role = this.genericService.stringToBytes(role.toLowerCase());
       let connecteduser = await this.genericService.getConnectedUser();
-      let txnConfirmation = await this.connectService.addRequester(
+      let txnConfirmation = await this.usersService.addRequester(
         connecteduser,
         organisation,
         department,
@@ -89,11 +93,13 @@ export class UserComponent implements OnInit {
       );
       if (txnConfirmation.confirmations === 1) {
         this.isLoading = false;
+        this.resetForms();
         this.alertService.alertSuccessMessage('Request submitted successfully');
       }
     } catch (error: any) {
       console.log(error);
       this.isLoading = false;
+      this.resetForms();
       this.alertService.alertErrorMessage(error.message);
     }
   }

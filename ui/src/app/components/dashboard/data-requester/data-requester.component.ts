@@ -5,6 +5,7 @@ import { GenericService } from '../../../services/generic.service';
 import { ServerService } from '../../../services/server.service';
 import { AlertsService } from '../../../services/alerts.service';
 import { PolicyManagementService } from 'src/app/services/policy-management.service';
+import { UserManagementService } from 'src/app/services/user-management.service';
 
 export interface DataRequester {
   requesterAddress: string;
@@ -46,6 +47,7 @@ export class DataRequesterComponent implements OnInit {
     private connectService: ConnectService,
     private genericService: GenericService,
     private serverService: ServerService,
+    private usersService: UserManagementService,
     private alertService: AlertsService,
     private policyService: PolicyManagementService
   ) {}
@@ -63,7 +65,7 @@ export class DataRequesterComponent implements OnInit {
   async getRequesterDetails() {
     try {
       let requester: DataRequester =
-        await this.connectService.getRequesterDetails();
+        await this.usersService.getRequesterDetails();
       this.dataRequester = requester;
       this.dataRequester.approved = true;
       if (this.dataRequester.approved) {

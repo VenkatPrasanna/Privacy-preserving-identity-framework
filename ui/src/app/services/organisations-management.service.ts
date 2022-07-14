@@ -1,12 +1,13 @@
 import { Injectable } from '@angular/core';
 import { GenericService } from './generic.service';
+import { environment } from '../../environments/environment';
 import Organisations from '../abis/Organisations.json';
 
 @Injectable({
   providedIn: 'root',
 })
 export class OrganisationsManagementService {
-  organisationContractAddress = '0x578e7210956d6198Cec9706973F860Af85B10Ee8';
+  organisationContractAddress = environment.organisationContractAddress;
   organisationContract: any;
   constructor(private genericService: GenericService) {
     this.organisationContract = this.genericService.createContract(
@@ -48,11 +49,11 @@ export class OrganisationsManagementService {
   async getAllDesignations() {
     try {
       let organisationcontract = await this.organisationContract;
-      let departments = await organisationcontract.getAllDesignations();
-      departments = departments.map((designation: string) =>
+      let designations = await organisationcontract.getAllDesignations();
+      designations = designations.map((designation: string) =>
         this.genericService.bytesToString(designation)
       );
-      return departments;
+      return designations;
     } catch (error: any) {
       console.log(error);
     }
@@ -61,17 +62,50 @@ export class OrganisationsManagementService {
   async createOrganisation(
     name: string,
     departmentName: string,
-    designation: string
+    designation: string,
+    isToAddDesignation: boolean
   ) {
     let organisationcontract = await this.organisationContract;
     let txn = await organisationcontract.createOrganisation(
       name,
       departmentName,
       designation,
-      true
+      isToAddDesignation
     );
     let txnconfirmation = txn.wait();
-    console.log(txnconfirmation);
+    return txnconfirmation;
+  }
+
+  async addDeptToOrganisation(
+    orgid: string,
+    departmentName: string,
+    designation: string,
+    isToAddDesignation: boolean
+  ) {
+    let organisationcontract = await this.organisationContract;
+    let txn = await organisationcontract.addDepartmentToOrg(
+      orgid,
+      departmentName,
+      designation,
+      isToAddDesignation
+    );
+    let txnconfirmation = txn.wait();
+    return txnconfirmation;
+  }
+
+  async addDesignationToDepartment(
+    depid: string,
+    designation: string,
+    isToAddDesignation: boolean
+  ) {
+    let organisationcontract = await this.organisationContract;
+    let txn = await organisationcontract.addDesignationToDepartment(
+      depid,
+      designation,
+      isToAddDesignation
+    );
+    let txnconfirmation = txn.wait();
+    return txnconfirmation;
   }
 
   async organisationSpecificDepartments(orgid: string) {

@@ -6,6 +6,7 @@ import { MatDialog, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { ConnectService } from '../../../services/connect.service';
 import { GenericService } from '../../../services/generic.service';
 import { ServerService } from '../../../services/server.service';
+import { UserManagementService } from 'src/app/services/user-management.service';
 import { ModifyDataComponent } from './modify-data/modify-data.component';
 import { PolicyComponent } from './policy/policy.component';
 
@@ -55,6 +56,7 @@ export class DataOwnerComponent implements OnInit {
     private connectService: ConnectService,
     private genericService: GenericService,
     private serverService: ServerService,
+    private usersService: UserManagementService,
     public dialog: MatDialog
   ) {}
 
@@ -149,9 +151,9 @@ export class DataOwnerComponent implements OnInit {
   }
 
   async getOwnerDetails() {
-    let owner: any = await this.connectService.getDataOwnerDetails();
+    let owner: any = await this.usersService.getDataOwnerDetails();
+    console.log(owner);
     this.dataOwner = owner;
-    this.dataOwner.approved = true;
     if (owner.approved) {
       console.log('Approved owner');
     } else {

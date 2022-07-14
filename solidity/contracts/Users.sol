@@ -1,9 +1,8 @@
 //SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.6;
+pragma solidity 0.8.7;
 
 contract Users {
     address public superadmin;
-    //Organisations organisationInstance;
 
     struct Owner {
         address ownerAddress;
@@ -20,11 +19,15 @@ contract Users {
         bool approved;
     }
 
+    struct UsersMinimal {
+        address userAddress;
+        uint userType;
+        bool approved;
+    }
+
     constructor() {
         superadmin = msg.sender;
-       // allUsers.push(User(superadmin, 3));
         userToRole[msg.sender] = 3;
-        //organisationInstance = Organisations(orgcontractAddress);
     }
 
     // modifiers
@@ -43,62 +46,86 @@ contract Users {
     // Events goes here
     event UserUpdated(
         address userAddress,
+        uint userType,
         bool approved
     );
+
+    UsersMinimal[] allUsers;
 
     //mapping owner address to owner struct
     mapping(address => Owner) owners;
     mapping(address => Requester) requesters;
     mapping(address => uint) userToRole;
+    mapping(address => bytes) requesterToPublicKey;
+    mapping(address => uint) userIndexToUpdate;
 
     // Function to add data owners
-    function addDataOwner(address ownerAddress, bytes32 profession, bytes32 location) public isUserExists(ownerAddress) {
-        owners[ownerAddress] = Owner(ownerAddress, profession, location, false);
+    function addDataOwner(address ownerAddress, bytes32 profession, bytes32 location) external isUserExists(ownerAddress) {
+        owners[ownerAddress] = Owner(ownerAddress, profession, location, false);        
         userToRole[ownerAddress] = 1;
-        emit UserUpdated(ownerAddress, false);
+        allUsers.push(UsersMinimal(ownerAddress, 1, false));
+        //uint userIndex = allUsers.length-1;
+        userIndexToUpdate[ownerAddress] = allUsers.length-1;
+        emit UserUpdated(ownerAddress, 1, false);
     }
 
-    function addDataRequester(address requesterAddress, bytes32 organisation, bytes32 department, bytes32 designation) public isUserExists(requesterAddress) {
+    function addDataRequester(address requesterAddress, bytes32 organisation, bytes32 department, bytes32 designation, bytes memory publicKey) external isUserExists(requesterAddress) {
         requesters[requesterAddress] = Requester(requesterAddress, organisation, department, designation, false);
         userToRole[requesterAddress] = 2;
-        emit UserUpdated(requesterAddress, false);
+        requesterToPublicKey[requesterAddress] = publicKey;
+        allUsers.push(UsersMinimal(requesterAddress, 2, false));
+        //uint userIndex = allUsers.length-1;
+        userIndexToUpdate[requesterAddress] = allUsers.length-1;        
+        emit UserUpdated(requesterAddress, 2, false);
     }
 
-    function updateDataOwner(address ownerAddress, bytes32 profession, bytes32 location) public {
+    function updateDataOwner(address ownerAddress, bytes32 profession, bytes32 location) external {
         require(owners[ownerAddress].ownerAddress == msg.sender, "Invalid user operation");
         owners[ownerAddress] = Owner(ownerAddress, profession, location, false);
-        emit UserUpdated(ownerAddress, false);
+        uint ownerIndex = userIndexToUpdate[ownerAddress];
+        allUsers[ownerIndex] = UsersMinimal(ownerAddress, 1, false);
+        emit UserUpdated(ownerAddress, 1, false);
     }
 
-    function updateDataRequester(address requesterAddress, bytes32 organisation, bytes32 department, bytes32 designation) public {
+    function updateDataRequester(address requesterAddress, bytes32 organisation, bytes32 department, bytes32 designation) external {
         require(requesters[requesterAddress].requesterAddress == msg.sender, "Invalid user operation");
         requesters[requesterAddress] = Requester(requesterAddress, organisation, department, designation, false);
-        emit UserUpdated(requesterAddress, false);
+        uint requesterIndex = userIndexToUpdate[requesterAddress];
+        allUsers[requesterIndex] = UsersMinimal(requesterAddress, 2, false);
+        emit UserUpdated(requesterAddress, 2, false);
     }
 
-    function getDataOwner(address ownerAddress) public view returns(Owner memory) {
+    function getDataOwner(address ownerAddress) external view returns(Owner memory) {
         return owners[ownerAddress];
     }
 
-    function getDataRequester(address requesterAddress) public view returns(Requester memory) {
+    function getDataRequester(address requesterAddress) external view returns(Requester memory) {
         return requesters[requesterAddress];
     }
 
-    function getSuperAdmin() public view returns(address) {
+    function getSuperAdmin() external view returns(address) {
         return superadmin;
     }
 
-    function getUserRole(address userAddress) public view returns (uint) {
+    function getUserRole(address userAddress) external view returns (uint) {
         return userToRole[userAddress];
     }
 
-    function approveOwner(address ownerAddress) public onlySuperAdmin(msg.sender) {
-        owners[ownerAddress].approved = true;
-        emit UserUpdated(ownerAddress, true);
+    function getAllUsers() external view returns(UsersMinimal[] memory) {
+        return allUsers;
     }
 
-    function approveRequester(address requesterAddress) public onlySuperAdmin(msg.sender) {
+    function approveOwner(address ownerAddress) external onlySuperAdmin(msg.sender) {
+        owners[ownerAddress].approved = true;
+        uint ownerIndex = userIndexToUpdate[ownerAddress];
+        allUsers[ownerIndex] = UsersMinimal(ownerAddress, 1, true);
+        emit UserUpdated(ownerAddress, 1, true);
+    }
+
+    function approveRequester(address requesterAddress) external onlySuperAdmin(msg.sender) {
         requesters[requesterAddress].approved = true;
-        emit UserUpdated(requesterAddress, true);
+        uint requesterIndex = userIndexToUpdate[requesterAddress];
+        allUsers[requesterIndex] = UsersMinimal(requesterAddress, 2, true);
+        emit UserUpdated(requesterAddress, 2, true);
     }
 }

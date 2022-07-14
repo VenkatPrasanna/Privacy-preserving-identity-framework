@@ -1,8 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { ActivatedRoute } from '@angular/router';
-import { ConnectService } from '../../services/connect.service';
 import { GenericService } from '../../services/generic.service';
+import { UserManagementService } from 'src/app/services/user-management.service';
+
 @Component({
   selector: 'app-home',
   templateUrl: './home.component.html',
@@ -11,9 +11,9 @@ import { GenericService } from '../../services/generic.service';
 export class HomeComponent implements OnInit {
   isUserNotFound: boolean = false;
   constructor(
-    private connectService: ConnectService,
     private router: Router,
-    private genericService: GenericService
+    private genericService: GenericService,
+    private usersService: UserManagementService
   ) {}
 
   ngOnInit(): void {
@@ -27,27 +27,20 @@ export class HomeComponent implements OnInit {
       this.router.navigate(['connect']);
     } else {
       this.whichUser();
-      //this.router.navigate(['user']);
     }
   }
 
   async whichUser() {
     let connecteduser = await this.genericService.getConnectedUser();
 
-    let allusers = await this.connectService.getAllUsers();
-    let isExistingUser = allusers.find(
-      (user: any) => user.address.toLowerCase() === connecteduser
-    );
-    console.log(isExistingUser);
-    if (isExistingUser) {
-      // Check here for approval status
-      // Roles - 1 is Data owner, 2 is Data Requester
-      if (isExistingUser.role === 1) {
-        this.router.navigate(['data-owner']);
-      } else if (isExistingUser.role === 2) {
-        this.router.navigate(['data-requester']);
-      }
-      //this.router.navigate(['admin']);
+    let userRole = await this.usersService.getUserRole(connecteduser);
+    // If userRole is 0 --> User is not found, userRole 1 is owner, 2 is requester, 3 is superadmin
+    if (userRole === 1) {
+      this.router.navigate(['data-owner']);
+    } else if (userRole === 2) {
+      this.router.navigate(['data-requester']);
+    } else if (userRole === 3) {
+      this.router.navigate(['admin']);
     } else {
       this.router.navigate(['user']);
     }
