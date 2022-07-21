@@ -7,8 +7,6 @@ async function generateKey() {
 }
 
 async function addNewKey(data) {
-  console.log("ddgj");
-  console.log(data);
   await keysdb.findOneAndUpdate(
     {
       dataid: data.dataid,
@@ -25,7 +23,8 @@ async function getAllKeys() {
 }
 
 async function getKeyofData(id) {
-  return await keysdb.findOne({ dataid: id });
+  let key = await keysdb.findOne({ dataid: id });
+  return key;
 }
 
 module.exports = {

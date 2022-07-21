@@ -5,7 +5,11 @@ import "./Users.sol";
 
 contract Organisations is Users {
 
-    Users usersContractInstance;
+    Users public usersContractInstance;
+    bytes32[] public alldesignations;
+    OrganisationMinimal[] public allOrganisations;
+    DepartmentMinimal[] public allDepartments;
+    uint public organisationCounter = 0;
 
     struct Department {
         string depid;
@@ -38,12 +42,6 @@ contract Organisations is Users {
     mapping(string => Organisation) organisations;
     mapping(string => Department) departments;
     
-    bytes32[] alldesignations;
-    OrganisationMinimal[] allOrganisations;
-    DepartmentMinimal[] allDepartments;
-
-    uint organisationCounter = 0;
-
     modifier superAdmin(address senderAddress) {
         require(usersContractInstance.getSuperAdmin() == senderAddress, "Invalid user operation");
         _;
@@ -82,7 +80,7 @@ contract Organisations is Users {
         return string(abi.encodePacked(val, sid));
     }
 
-    function createOrganisation(bytes32 name, bytes32 departmentName, bytes32 designation, bool isAddDesignation) external {
+    function createOrganisation(bytes32 name, bytes32 departmentName, bytes32 designation, bool isAddDesignation) external superAdmin(msg.sender) {
         organisationCounter = organisationCounter + 1;
         string memory orgid = makeId(organisationCounter, "org");
         organisations[orgid].orgid = orgid;
@@ -103,7 +101,7 @@ contract Organisations is Users {
         allDepartments.push(DepartmentMinimal(finaldid, departmentName));
     }
 
-    function addDepartmentToOrg(string memory orgid, bytes32 departmentName, bytes32 designation, bool isAddDesignation) external {
+    function addDepartmentToOrg(string memory orgid, bytes32 departmentName, bytes32 designation, bool isAddDesignation) external superAdmin(msg.sender) {
         require(keccak256(bytes(organisations[orgid].orgid)) == keccak256(bytes(orgid)), "Invalid organisation"); 
         uint deptlength = organisations[orgid].totalDepartments + 1;
         string memory odid = string(abi.encodePacked(orgid, "dep"));
@@ -119,7 +117,7 @@ contract Organisations is Users {
         allDepartments.push(DepartmentMinimal(finaldid, departmentName));
     }
 
-    function addDesignationToDepartment(string memory depid, bytes32 designation, bool isAddDesignation) external {
+    function addDesignationToDepartment(string memory depid, bytes32 designation, bool isAddDesignation) external superAdmin(msg.sender) {
         require(departments[depid].designations.length > 0, "Invalid department");
         if(isAddDesignation) {
             alldesignations.push(designation);

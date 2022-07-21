@@ -21,24 +21,13 @@ app.use(bodyParser.json());
 
 app.use("/", api);
 
-app.get("/api/keybyid", async (req, res) => {
-  console.log(req);
-});
-// app.get("/*", (req, res) => {
-//   //res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
-//   //console.log(path.join(__dirname, ".."));
-//   res.sendFile(
-//     path.join(__dirname, "..", "..", "ui", "ui", "src", "index.html")
-//   );
-// });
-
-// app.get("/key", async (req, res) => {
-//   const key = await generateKey();
-//   res.json(key);
-// });
-
 app.get("/*", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "public", "index.html"));
 });
+
+// app.get("/api/keybyid", async (req, res) => {
+//   console.log("dshgfjsdfgj");
+//   console.log(req.query);
+// });
 
 module.exports = app;

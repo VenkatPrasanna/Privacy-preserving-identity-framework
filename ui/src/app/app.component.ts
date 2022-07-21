@@ -1,5 +1,4 @@
 import { Component } from '@angular/core';
-import { ConnectService } from './services/connect.service';
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',

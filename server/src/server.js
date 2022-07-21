@@ -2,9 +2,9 @@ const http = require("http");
 const mongoose = require("mongoose");
 const app = require("./app");
 
-const PORT = process.env.PORT || 8000;
-// const MONGO_URL = "mongodb://dapp_db:27017";
-const MONGO_URL = "mongodb://127.0.0.1:27017";
+const PORT = process.env.PORT || 7000;
+const MONGO_URL = "mongodb://myapp_db:27017";
+//const MONGO_URL = "mongodb://127.0.0.1:27017";
 //app.set("port", PORT);
 const server = http.createServer(app);
 

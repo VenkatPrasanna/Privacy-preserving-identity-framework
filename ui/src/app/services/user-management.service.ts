@@ -4,8 +4,6 @@ import { ethers } from 'ethers';
 
 import { AlertsService } from './alerts.service';
 import { GenericService } from './generic.service';
-import { OrganisationsManagementService } from './organisations-management.service';
-import { ConnectService } from './connect.service';
 import Users from '../abis/Users.json';
 
 export interface DataOwner {
@@ -37,9 +35,7 @@ export class UserManagementService {
   usersContract: any;
   constructor(
     private genericService: GenericService,
-    private alertService: AlertsService,
-    private orgService: OrganisationsManagementService,
-    private connectService: ConnectService
+    private alertService: AlertsService
   ) {
     this.usersContract = this.genericService.createContract(
       this.usersContractAddress,
@@ -59,6 +55,16 @@ export class UserManagementService {
     }
   }
 
+  async getPublicKey(requesterAddress: string) {
+    try {
+      let usercontract = await this.usersContract;
+      let key = await usercontract.getPublicKey(requesterAddress);
+      return key;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
   // Data owner related opertaions -- starts
   async addOwner(address: string, profession: string, location: string) {
     try {
@@ -72,7 +78,6 @@ export class UserManagementService {
       return txnconfirmation;
     } catch (error: any) {
       console.log(error);
-      this.alertService.alertErrorMessage(error.data.message);
     }
   }
 
@@ -85,11 +90,10 @@ export class UserManagementService {
         profession,
         location
       );
-      await transactionHash.wait();
-      this.alertService.alertSuccessMessage('Request submitted successfully');
+      let txnconfirmation = await transactionHash.wait();
+      return txnconfirmation;
     } catch (error: any) {
       console.log(error);
-      this.alertService.alertErrorMessage(error.data.message);
     }
   }
 
@@ -214,6 +218,31 @@ export class UserManagementService {
       );
     }
   }
+
+  async addCategory(category: string) {
+    try {
+      let usercontract = await this.usersContract;
+      let txn = await usercontract.addCategory(category);
+      let txnconfirmation = txn.wait();
+      return txnconfirmation;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async getAllCategories() {
+    try {
+      let usercontract = await this.usersContract;
+      let categories = await usercontract.getAllCategories();
+      categories = categories.map((category: string) =>
+        this.genericService.bytesToString(category)
+      );
+      return categories;
+    } catch (error) {
+      console.log(error);
+      this.alertService.alertErrorMessage('Failed to fetch categories');
+    }
+  }
   // super admin related opeartions -- ends
 
   // Data requester related operations -- starts
@@ -225,7 +254,7 @@ export class UserManagementService {
   ) {
     try {
       let usercontract = await this.usersContract;
-      let publicKey = await this.connectService.getPublickey();
+      let publicKey = await this.genericService.getPublickey();
       publicKey = await this.genericService.stringToBytes(publicKey);
       let transactionHash = await usercontract.addDataRequester(
         address,
@@ -238,7 +267,27 @@ export class UserManagementService {
       return txnconfirmation;
     } catch (error: any) {
       console.log(error.message);
-      this.alertService.alertErrorMessage(error.message);
+    }
+  }
+
+  async updateDataRequester(
+    address: string,
+    organisation: string,
+    department: string,
+    designation: string
+  ) {
+    try {
+      let usercontract = await this.usersContract;
+      let transactionHash = await usercontract.updateDataRequester(
+        address,
+        organisation,
+        department,
+        designation
+      );
+      let txnconfirmation = await transactionHash.wait();
+      return txnconfirmation;
+    } catch (error: any) {
+      console.log(error.message);
     }
   }
 

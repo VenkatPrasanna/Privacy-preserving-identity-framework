@@ -3,6 +3,8 @@ pragma solidity 0.8.7;
 
 contract Users {
     address public superadmin;
+    UsersMinimal[] allUsers;
+    bytes32[] allCategories;
 
     struct Owner {
         address ownerAddress;
@@ -50,14 +52,12 @@ contract Users {
         bool approved
     );
 
-    UsersMinimal[] allUsers;
-
     //mapping owner address to owner struct
-    mapping(address => Owner) owners;
-    mapping(address => Requester) requesters;
-    mapping(address => uint) userToRole;
-    mapping(address => bytes) requesterToPublicKey;
-    mapping(address => uint) userIndexToUpdate;
+    mapping(address => Owner) public owners;
+    mapping(address => Requester) public requesters;
+    mapping(address => uint) public userToRole;
+    mapping(address => bytes) public requesterToPublicKey;
+    mapping(address => uint) public userIndexToUpdate;
 
     // Function to add data owners
     function addDataOwner(address ownerAddress, bytes32 profession, bytes32 location) external isUserExists(ownerAddress) {
@@ -127,5 +127,17 @@ contract Users {
         uint requesterIndex = userIndexToUpdate[requesterAddress];
         allUsers[requesterIndex] = UsersMinimal(requesterAddress, 2, true);
         emit UserUpdated(requesterAddress, 2, true);
+    }
+
+    function addCategory(bytes32 category) external onlySuperAdmin(msg.sender) {
+        allCategories.push(category);
+    }
+
+    function getAllCategories() external view returns(bytes32[] memory) {
+        return allCategories;
+    }
+
+    function getPublicKey(address requesterAddress) external view returns(bytes memory) {
+        return requesterToPublicKey[requesterAddress];
     }
 }

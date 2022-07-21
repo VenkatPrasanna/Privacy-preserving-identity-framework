@@ -9,18 +9,24 @@ export class ServerService {
   constructor(private http: HttpClient) {}
 
   async getKey() {
-    let key = this.http.get('http://localhost:8000/keys/genkey');
+    let key = this.http.get('http://localhost:7000/keys/genkey');
     return firstValueFrom(key);
   }
 
   async submitNewKey(data: any) {
-    return this.http.post('http://localhost:8000/keys/addkey', data, {
+    return this.http.post('http://localhost:7000/keys/addkey', data, {
       observe: 'response',
     });
   }
 
   async getAllKeys() {
-    return this.http.get('http://localhost:8000/keys/allkeys');
+    return this.http.get('http://localhost:7000/keys/allkeys');
+  }
+
+  async getKeybyId(dataid: string) {
+    return this.http.get('http://localhost:7000/keys/keybyid', {
+      params: new HttpParams().set('dataid', dataid),
+    });
   }
 
   // async getKeyOfData(dataid: string) {

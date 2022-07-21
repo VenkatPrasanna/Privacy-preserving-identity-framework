@@ -73,13 +73,6 @@ export class PolicyComponent implements OnInit {
         ...returnedDepartments,
       ])
     );
-    // let otherdeps = JSON.parse(JSON.stringify(returnedDepartments));
-    // this.filteredDepartments = JSON.parse(
-    //   JSON.stringify([
-    //     { depid: 'any', depname: 'any', isAllowed: true },
-    //     ...otherdeps,
-    //   ])
-    // );
   }
 
   async getAllDesignations() {
@@ -90,8 +83,11 @@ export class PolicyComponent implements OnInit {
         let designationObj = { name: designation, isAllowed: true };
         return designationObj;
       });
-      this.allRoles = [...this.filteredRoles, ...designations];
-      //this.filteredRoles = [...this.filteredRoles, ...designations];
+      console.log(designations);
+      this.allRoles = JSON.parse(
+        JSON.stringify([...this.filteredRoles, ...designations])
+      );
+      console.log(this.allRoles);
     } catch (error: any) {
       console.log(error);
     }
@@ -276,14 +272,21 @@ export class PolicyComponent implements OnInit {
             await this.orgService.getDepartmentDetails(matchedDepartmentIds[i]);
           let { depname, designations } = returnedDepartment;
           designations.map((designation: string) => {
-            this.filteredRoles.push(
-              JSON.parse(
-                JSON.stringify({
-                  name: designation + ' - ' + depname,
-                  isAllowed: true,
-                })
-              )
+            let found = this.filteredRoles.find(
+              (frole: any) =>
+                frole.name.toLowerCase().split(' - ').includes(depname) &&
+                frole.name.toLowerCase().split(' - ').includes(designation)
             );
+            if (!found) {
+              this.filteredRoles.push(
+                JSON.parse(
+                  JSON.stringify({
+                    name: designation + ' - ' + depname,
+                    isAllowed: true,
+                  })
+                )
+              );
+            }
           });
         }
         return;
@@ -302,7 +305,6 @@ export class PolicyComponent implements OnInit {
         return;
       }
     }
-    this.filteredRoles = [{ name: 'any', isAllowed: true }];
 
     // If organisation is selected
     if (!isAnyOrg) {
@@ -331,14 +333,21 @@ export class PolicyComponent implements OnInit {
               let found = organisation.departmentids.includes(departmentIds[i]);
               if (found) {
                 let orgname = organisation.orgname;
-                this.filteredRoles.push(
-                  JSON.parse(
-                    JSON.stringify({
-                      name: designation + ' - ' + orgname,
-                      isAllowed: true,
-                    })
-                  )
+                let isRolefound = this.filteredRoles.find(
+                  (frole: any) =>
+                    frole.name.toLowerCase().split(' - ').includes(orgname) &&
+                    frole.name.toLowerCase().split(' - ').includes(designation)
                 );
+                if (!isRolefound) {
+                  this.filteredRoles.push(
+                    JSON.parse(
+                      JSON.stringify({
+                        name: designation + ' - ' + orgname,
+                        isAllowed: true,
+                      })
+                    )
+                  );
+                }
               }
             });
           });
@@ -355,14 +364,22 @@ export class PolicyComponent implements OnInit {
               let found = organisation.departmentids.includes(depid);
               if (found) {
                 let orgname = organisation.orgname;
-                this.filteredRoles.push(
-                  JSON.parse(
-                    JSON.stringify({
-                      name: designation + ' - ' + orgname + ' - ' + depname,
-                      isAllowed: true,
-                    })
-                  )
+                let isRolefound = this.filteredRoles.find(
+                  (frole: any) =>
+                    frole.name.toLowerCase().split(' - ').includes(orgname) &&
+                    frole.name.toLowerCase().split(' - ').includes(depname) &&
+                    frole.name.toLowerCase().split(' - ').includes(designation)
                 );
+                if (!isRolefound) {
+                  this.filteredRoles.push(
+                    JSON.parse(
+                      JSON.stringify({
+                        name: designation + ' - ' + orgname + ' - ' + depname,
+                        isAllowed: true,
+                      })
+                    )
+                  );
+                }
               }
             });
           });
@@ -626,6 +643,7 @@ export class PolicyComponent implements OnInit {
       if (txnconfirmation.confirmations === 1) {
         this.isLoading = false;
         this.alertService.alertSuccessMessage('Policy is added successfully');
+        this.dialogRef.close();
       }
     } catch (error: any) {
       console.log(error);

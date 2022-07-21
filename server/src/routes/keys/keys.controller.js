@@ -27,8 +27,9 @@ async function httpAddKey(req, res) {
 }
 
 async function getKeybyID(req, res) {
-  console.log("req is");
-  console.log(req.body);
+  let id = req.query.dataid;
+  const key = await getKeyofData(id);
+  return res.status(200).json(key);
 }
 
 async function httpGetAllKeys(req, res) {

@@ -1,7 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { FormGroup, Validators, FormControl } from '@angular/forms';
 import { GenericService } from '../../services/generic.service';
-import { ConnectService } from '../../services/connect.service';
 import { AlertsService } from '../../services/alerts.service';
 import { UserManagementService } from 'src/app/services/user-management.service';
 
@@ -28,13 +27,11 @@ export class UserComponent implements OnInit {
 
   constructor(
     private genericService: GenericService,
-    private connectService: ConnectService,
     private alertService: AlertsService,
     private usersService: UserManagementService
   ) {}
 
   ngOnInit(): void {
-    //this.connectService.isUserConnected();
     this.ownerRegistrationForm = new FormGroup({
       profession: new FormControl('', Validators.required),
       location: new FormControl('', Validators.required),
@@ -69,7 +66,7 @@ export class UserComponent implements OnInit {
       this.isLoading = false;
       this.resetForms();
       console.log(error);
-      this.alertService.alertErrorMessage(error.message);
+      this.alertService.alertErrorMessage(error.data.message);
     }
   }
 
@@ -100,7 +97,7 @@ export class UserComponent implements OnInit {
       console.log(error);
       this.isLoading = false;
       this.resetForms();
-      this.alertService.alertErrorMessage(error.message);
+      this.alertService.alertErrorMessage(error.data.message);
     }
   }
 

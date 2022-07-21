@@ -19,6 +19,7 @@ contract Data is Users {
     event DatasetAdded(
         string id,
         bytes32 name,
+        bytes value,
         bytes32 category,
         address ownerAddress
     );
@@ -27,21 +28,15 @@ contract Data is Users {
         string dataid,
         address indexed ownerAddress,
         address indexed requesterAddress,
-        bytes32 accessType,
-        bytes publicKey
+        bytes32 accessType
     );
 
     event ApproveKeyRequest(
         string dataid,
+        address indexed ownerAddress,
         address indexed requesterAddress,
         bytes key
     );
-
-    // mapping for user related data item
-    mapping(address => mapping(string => Dataset)) userSpecificData;
-
-    // Mapping to creation relation between key and data item
-    //mapping(address => mapping(string => bytes32)) userDataKey;
 
     // Mapping dataowner and data id
     mapping (string => address) dataOwnerMap;
@@ -68,39 +63,39 @@ contract Data is Users {
         _; 
     }
 
-    function addData(string memory id, bytes32 name, bytes memory value, bytes32 category) external onlyDataOwner(msg.sender) {
-        userSpecificData[msg.sender][id] = Dataset(id, msg.sender, name, value, category);
-        //userDataKey[msg.sender][id] = key;
+    function addData(string memory id, bytes32 name, bytes memory value, bytes32 category) external onlyDataOwner(msg.sender) {        
         dataOwnerMap[id] = msg.sender; 
         allUserData[msg.sender].push(Dataset(id, msg.sender, name, value, category));
-        emit DatasetAdded(id, name, category, msg.sender);
+        emit DatasetAdded(id, name, value, category, msg.sender);
     }
 
-    function updateData(string memory id, bytes32 name, bytes memory value, bytes32 category) external isOwnerOfDataset(msg.sender, id) {
-        userSpecificData[msg.sender][id] = Dataset(id, msg.sender, name, value, category);
-        //userDataKey[msg.sender][id] = key;
+    function updateData(string memory id, bytes32 name, bytes memory value, bytes32 category) external isOwnerOfDataset(msg.sender, id) {        
         for(uint i = 0; i < allUserData[msg.sender].length; i++) {
             if(keccak256(bytes(allUserData[msg.sender][i].id)) == keccak256(bytes(id))) {
                 allUserData[msg.sender][i] = Dataset(id, msg.sender, name, value, category);
             }
         }
-        emit DatasetAdded(id, name, category, msg.sender);
+        emit DatasetAdded(id, name, value, category, msg.sender);
     }
 
     function getUserData() external view returns(Dataset[] memory) {
         return allUserData[msg.sender];
     }
 
-    function getSingleDataItem(string memory id) external isOwnerOfDataset(msg.sender, id) view returns(Dataset memory) {
-        return userSpecificData[msg.sender][id];
-    }
+    // function getSingleDataItem(string memory id) external view returns(Dataset memory) {
+    //     return userSpecificData[msg.sender][id];
+    // }
 
-    function requestKey(string memory dataid, address ownerAddress, bytes32 accessType, bytes memory publicKey) external onlyDataRequester(msg.sender) {
-        emit KeyRequested(dataid, ownerAddress, msg.sender, accessType, publicKey);
+    function requestKey(string memory dataid, address ownerAddress, bytes32 accessType) external onlyDataRequester(msg.sender) {
+        emit KeyRequested(dataid, ownerAddress, msg.sender, accessType);
     }
 
     function approveKeyRequest(string memory dataid, address requesterAddress, bytes memory key) external onlyDataOwner(msg.sender) {
-        emit ApproveKeyRequest(dataid, requesterAddress, key);
+        emit ApproveKeyRequest(dataid, msg.sender, requesterAddress, key);
+    }
+
+    function getDatasetOwner(string memory dataid) external view returns(address) {
+        return dataOwnerMap[dataid];
     }
 
 

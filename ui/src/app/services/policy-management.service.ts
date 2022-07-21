@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { environment } from '../../environments/environment';
 import { GenericService } from './generic.service';
 import Policies from '../abis/Policies.json';
 
@@ -6,7 +7,7 @@ import Policies from '../abis/Policies.json';
   providedIn: 'root',
 })
 export class PolicyManagementService {
-  policyContractAddress = '0xF65151C898962FAE174B4ec7e4A67755Ecd4C505';
+  policyContractAddress = environment.policiesContractAddress;
   policyContract: any;
   constructor(private genericService: GenericService) {
     this.policyContract = this.genericService.createContract(

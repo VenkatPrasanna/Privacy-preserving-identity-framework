@@ -73,4 +73,16 @@ export class GenericService {
       console.log(error);
     }
   }
+
+  async getPublickey() {
+    let user = await this.getConnectedUser();
+    const keyb64 = (await this.ethereum.request({
+      method: 'eth_getEncryptionPublicKey',
+      params: [user],
+    })) as string;
+    // console.log(keyb64);
+    // const publicKey = Buffer.from(keyb64, 'base64');
+    // this.encryptionKey = publicKey;
+    return keyb64;
+  }
 }

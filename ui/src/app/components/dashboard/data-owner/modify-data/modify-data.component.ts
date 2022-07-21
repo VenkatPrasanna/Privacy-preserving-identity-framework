@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, NgZone, ViewChild } from '@angular/core';
+import { Component, Inject, OnInit, NgZone } from '@angular/core';
 import { FormGroup, Validators, FormControl } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { HttpResponse } from '@angular/common/http';
@@ -6,8 +6,7 @@ import * as CryptoJS from 'crypto-js';
 
 import { v4 as uuidv4 } from 'uuid';
 import { ServerService } from '../../../../services/server.service';
-import { ConnectService } from '../../../../services/connect.service';
-import { GenericService } from '../../../../services/generic.service';
+import { DataManagementService } from 'src/app/services/data-management.service';
 import { AlertsService } from '../../../../services/alerts.service';
 
 @Component({
@@ -20,16 +19,12 @@ export class ModifyDataComponent implements OnInit {
   categories: string[] = [];
   isLoading = false;
   constructor(
-    @Inject(MAT_DIALOG_DATA) private data: any,
+    @Inject(MAT_DIALOG_DATA) public data: any,
     private dialogRef: MatDialogRef<ModifyDataComponent>,
-    private _ngZone: NgZone,
     private serverService: ServerService,
-    private connectService: ConnectService,
-    private genericService: GenericService,
+    private dataService: DataManagementService,
     private alertsService: AlertsService
   ) {}
-
-  //@ViewChild('autosize') autosize: CdkTextareaAutosize;
 
   ngOnInit(): void {
     this.categories = this.data.categories;
@@ -60,46 +55,72 @@ export class ModifyDataComponent implements OnInit {
 
   async onDataSubmit() {
     try {
+      let key = '';
+      let id = '';
       this.isLoading = true;
       let { name, value, category } = this.dataForm.value;
-      let id = this.generateDataID();
-      let key = await this.getGeneratedKey();
+      if (!name || !value || !category) return;
 
-      if (!name || !value || !category || !id || !key) return;
-
-      let encryptedValue = await this.encryptDataItemValue(key, value);
-      let keyObj = { dataid: id, key: key };
-      let addKeyResponse = await this.serverService.submitNewKey(keyObj);
-      addKeyResponse.subscribe(async (data: HttpResponse<{}>) => {
-        console.log(data.status);
-        if (data.status === 201) {
-          let txnconfirmation = await this.connectService.addDataset(
-            id,
-            name,
-            encryptedValue,
-            category
-          );
-
-          if (txnconfirmation.confirmations === 1) {
-            this.isLoading = false;
-            this.alertsService.alertSuccessMessage(
-              'Data is added successfully'
+      if (this.data.type === 'Add') {
+        key = await this.getGeneratedKey();
+        id = this.generateDataID();
+        if (!key || !id) return;
+        let encryptedValue = await this.encryptDataItemValue(key, value);
+        let keyObj = { dataid: id, key: key };
+        let addKeyResponse = await this.serverService.submitNewKey(keyObj);
+        addKeyResponse.subscribe(async (data: HttpResponse<{}>) => {
+          if (data.status === 201) {
+            let txnconfirmation = await this.dataService.addDataset(
+              id,
+              name,
+              encryptedValue,
+              category
             );
-          } else {
-          }
-          this.dialogRef.close({
-            dataid: id,
-            address: '',
-            name: name,
-            value: encryptedValue,
-            category: category,
-          });
-        }
-      });
 
-      // let decryptData = CryptoJS.AES.decrypt(encryptedValue, key.toString());
-      // let f = decryptData.toString(CryptoJS.enc.Utf8);
-      // console.log('dec data', f);
+            if (txnconfirmation.confirmations === 1) {
+              this.isLoading = false;
+              this.alertsService.alertSuccessMessage(
+                'Data is added successfully'
+              );
+            }
+            this.dialogRef.close({
+              dataid: id,
+              address: '',
+              name: name,
+              value: encryptedValue,
+              category: category,
+            });
+          }
+        });
+      } else if (this.data.type === 'Update') {
+        id = this.data.dataset.dataid;
+        let returnedKey = await this.serverService.getKeybyId(id);
+        returnedKey.subscribe(async (data: any) => {
+          if (data) {
+            let key = data.key;
+            let encryptedValue = await this.encryptDataItemValue(key, value);
+            let txnconfirmation = await this.dataService.updateDataset(
+              id,
+              name,
+              encryptedValue,
+              category
+            );
+            if (txnconfirmation.confirmations === 1) {
+              this.isLoading = false;
+              this.alertsService.alertSuccessMessage(
+                'Data is updated successfully'
+              );
+            }
+            this.dialogRef.close({
+              dataid: id,
+              address: '',
+              name: name,
+              value: encryptedValue,
+              category: category,
+            });
+          }
+        });
+      }
     } catch (error) {
       this.isLoading = false;
       this.alertsService.alertErrorMessage(
@@ -107,10 +128,4 @@ export class ModifyDataComponent implements OnInit {
       );
     }
   }
-  // triggerResize() {
-  //   // Wait for changes to be applied, then trigger textarea resize.
-  //   this._ngZone.onStable
-  //     .pipe(take(1))
-  //     .subscribe(() => this.autosize.resizeToFitContent(true));
-  // }
 }

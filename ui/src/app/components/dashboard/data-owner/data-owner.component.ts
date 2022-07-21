@@ -3,12 +3,13 @@ import { FormGroup, Validators, FormControl } from '@angular/forms';
 import { MatTable, MatTableDataSource } from '@angular/material/table';
 import { MatDialog, MAT_DIALOG_DATA } from '@angular/material/dialog';
 
-import { ConnectService } from '../../../services/connect.service';
 import { GenericService } from '../../../services/generic.service';
 import { ServerService } from '../../../services/server.service';
+import { AlertsService } from 'src/app/services/alerts.service';
 import { UserManagementService } from 'src/app/services/user-management.service';
 import { ModifyDataComponent } from './modify-data/modify-data.component';
 import { PolicyComponent } from './policy/policy.component';
+import { DataManagementService } from 'src/app/services/data-management.service';
 
 export interface DataOwner {
   ownerAddress: string;
@@ -37,14 +38,13 @@ export class DataOwnerComponent implements OnInit {
     location: '',
     approved: false,
   };
+  isLoading: boolean = false;
   ownerRegistrationForm: any;
   displayForm: boolean = false;
   showCancelBtn: boolean = false;
-  isUserAddition: boolean = false;
   isProfile: boolean = true;
   isRequests: boolean = false;
   isDataSets: boolean = false;
-
   displayedColumns: string[] = ['id', 'name', 'value', 'category', 'actions'];
   dataSource: any;
 
@@ -53,10 +53,11 @@ export class DataOwnerComponent implements OnInit {
   @ViewChild(MatTable) table: MatTable<Dataset>;
 
   constructor(
-    private connectService: ConnectService,
+    private dataService: DataManagementService,
     private genericService: GenericService,
     private serverService: ServerService,
     private usersService: UserManagementService,
+    private alertService: AlertsService,
     public dialog: MatDialog
   ) {}
 
@@ -66,41 +67,62 @@ export class DataOwnerComponent implements OnInit {
       location: new FormControl('', Validators.required),
     });
     this.getOwnerDetails();
-    this.getAllkeys();
+    //this.getAllkeys();
   }
 
-  applyFilter(event: Event) {
+  applyFilter(event: Event, type: string) {
     const filterValue = (event.target as HTMLInputElement).value;
-    this.dataSource.filter = filterValue.trim().toLowerCase();
+    if (type === 'key') {
+      this.keyRequestsSource.filter = filterValue.trim().toLowerCase();
+    } else {
+      this.dataSource.filter = filterValue.trim().toLowerCase();
+    }
   }
 
-  modifyData(actiontype: string) {
-    let categories = ['Marketing', 'Automobile'];
+  async modifyData(actiontype: string, toUpdateDataset: any) {
+    let categories: string[] = await this.usersService.getAllCategories();
     let dialogRef: any;
     if (actiontype === 'add') {
       dialogRef = this.dialog.open(ModifyDataComponent, {
         height: '400px',
         width: '600px',
         data: {
-          type: 'add',
+          type: 'Add',
           categories: categories,
         },
         disableClose: true,
       });
+
+      dialogRef.afterClosed().subscribe((result: any) => {
+        let datasets = this.dataSource.data;
+        datasets.push(result);
+        this.dataSource.data = datasets;
+        this.table.renderRows();
+      });
     } else if (actiontype === 'update') {
       dialogRef = this.dialog.open(ModifyDataComponent, {
         data: {
-          type: 'update',
+          type: 'Update',
+          dataset: toUpdateDataset,
           categories: categories,
         },
+        disableClose: true,
+      });
+
+      dialogRef.afterClosed().subscribe((result: any) => {
+        if (result) {
+          let datasets = this.dataSource.data;
+          let index = datasets.findIndex(
+            (data: any) => data.dataid === result.dataid
+          );
+          datasets[index].name = result.name;
+          datasets[index].value = result.value;
+          datasets[index].category = result.category;
+          this.dataSource.data = datasets;
+          this.table.renderRows();
+        }
       });
     }
-    dialogRef.afterClosed().subscribe((result: any) => {
-      let datasets = this.dataSource.data;
-      datasets.push(result);
-      this.dataSource.data = datasets;
-      this.table.renderRows();
-    });
   }
 
   updatePolicy(dataid: string) {
@@ -141,92 +163,55 @@ export class DataOwnerComponent implements OnInit {
   onUpdateButtonClick() {
     this.displayForm = true;
     this.showCancelBtn = true;
-    this.isUserAddition = false;
   }
 
   onCancelButtonClick() {
     this.displayForm = false;
     this.showCancelBtn = false;
-    this.isUserAddition = true;
   }
 
   async getOwnerDetails() {
     let owner: any = await this.usersService.getDataOwnerDetails();
-    console.log(owner);
     this.dataOwner = owner;
-    if (owner.approved) {
-      console.log('Approved owner');
-    } else {
-      console.log('Not approved owner');
-      if (!owner.profession || !owner.location) {
-        this.displayForm = true;
-        this.isUserAddition = true;
-      } else {
-        this.displayForm = false;
-        this.isUserAddition = false;
-      }
-    }
-  }
-
-  async registerOwner() {
-    try {
-      let { profession, location } = this.ownerRegistrationForm.value;
-      profession = this.genericService.stringToBytes(profession);
-      location = this.genericService.stringToBytes(location);
-      let connecteduser = await this.genericService.getConnectedUser();
-      console.log(connecteduser, profession, location);
-      console.log(this.isUserAddition);
-      // let txn = await this.connectService.addOwner(
-      //   connecteduser,
-      //   profession,
-      //   location
-      // );
-      // console.log(txn);
-    } catch (error) {
-      console.log(error);
-    }
-  }
-
-  async updateOwner() {
-    try {
-      let { profession, location } = this.ownerRegistrationForm.value;
-      profession = this.genericService.stringToBytes(profession);
-      location = this.genericService.stringToBytes(location);
-      let connecteduser = await this.genericService.getConnectedUser();
-      console.log(connecteduser, profession, location);
-      console.log(this.isUserAddition);
-      // let txn = await this.connectService.updateOwner(
-      //   connecteduser,
-      //   profession,
-      //   location
-      // );
-      // console.log(txn);
-    } catch (error) {
-      console.log(error);
-    }
   }
 
   async onSubmit() {
     try {
-      // check which mode to submit
-      if (this.isUserAddition) {
-        this.registerOwner();
-      } else {
-        this.updateOwner();
+      this.isLoading = true;
+      let { profession, location } = this.ownerRegistrationForm.value;
+      if (!profession || !location) {
+        return;
+      }
+      profession = this.genericService.stringToBytes(profession);
+      location = this.genericService.stringToBytes(location);
+      let connecteduser = await this.genericService.getConnectedUser();
+      let txnConfirmation = await this.usersService.updateDataOwner(
+        connecteduser,
+        profession,
+        location
+      );
+      if (txnConfirmation && txnConfirmation.confirmations === 1) {
+        this.isLoading = false;
+        this.resetForms();
+        this.displayForm = false;
+        this.getOwnerDetails();
+        this.alertService.alertSuccessMessage('Request submitted successfully');
       }
     } catch (error: any) {
       console.log(error);
+      this.isLoading = false;
+      this.alertService.alertSuccessMessage(error.data.message);
     }
   }
 
   async getDatasets() {
-    let datasets = await this.connectService.getUserData();
+    let datasets = await this.dataService.getUserData();
     this.dataSource = new MatTableDataSource(datasets);
   }
 
   async getKeyRequests() {
     try {
-      let keyrequests = await this.connectService.getKeyRequests();
+      let keyrequests = await this.dataService.filteredKeyRequests();
       this.keyRequestsSource = new MatTableDataSource(keyrequests);
     } catch (error) {
       console.log(error);
@@ -235,22 +220,35 @@ export class DataOwnerComponent implements OnInit {
 
   async approveRequest(element: any) {
     try {
-      let txn = await this.connectService.approveRequest(
+      let txn: any = await this.dataService.approveRequest(
         element.dataid,
-        element.requesterAddress,
-        element.publicKey
+        element.requesterAddress
+      );
+      this.keyRequestsSource = this.keyRequestsSource.data.filter(
+        (item: any) => item.dataid !== element.dataid
       );
     } catch (error) {
       console.log(error);
     }
   }
 
-  async getAllkeys() {
-    let keys = await this.serverService.getAllKeys();
-    keys.subscribe((data: any) => {
-      console.log(data);
-    });
+  shortendVal(value: string) {
+    let shortendValue = `${value.slice(0, 7)}....`;
+    return shortendValue;
   }
+
+  // async getAllkeys() {
+  //   let keys = await this.serverService.getAllKeys();
+  //   keys.subscribe((data: any) => {
+  //     console.log(data);
+  //   });
+  //   let key = await this.serverService.getKeybyId(
+  //     'e08ac05f0df146f3a6d5da00d1bb7b9e'
+  //   );
+  //   key.subscribe((data: any) => {
+  //     console.log(data);
+  //   });
+  // }
 
   resetForms() {
     this.ownerRegistrationForm.reset();

@@ -1,8 +1,8 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { MatTable, MatTableDataSource } from '@angular/material/table';
-import { ConnectService } from '../../../services/connect.service';
+import { FormGroup, Validators, FormControl } from '@angular/forms';
+import { DataManagementService } from 'src/app/services/data-management.service';
 import { GenericService } from '../../../services/generic.service';
-import { ServerService } from '../../../services/server.service';
 import { AlertsService } from '../../../services/alerts.service';
 import { PolicyManagementService } from 'src/app/services/policy-management.service';
 import { UserManagementService } from 'src/app/services/user-management.service';
@@ -36,30 +36,79 @@ export class DataRequesterComponent implements OnInit {
     designation: '',
     approved: false,
   };
+  isLoading = false;
   isProfile: boolean = true;
+  isDataSets: boolean = false;
   isAllowedData: boolean = false;
   isOtherData: boolean = false;
   displayedColumns: string[] = ['dataid', 'name', 'category', 'actions'];
   dataSource: any;
+  otherDatasets: any;
   policyMatch: boolean = false;
+  displayForm: boolean = false;
+  showCancelBtn: boolean = false;
+  updateForm: FormGroup;
+  selectedDataset: any;
+
   @ViewChild(MatTable) table: MatTable<Dataset>;
+
   constructor(
-    private connectService: ConnectService,
+    private dataService: DataManagementService,
     private genericService: GenericService,
-    private serverService: ServerService,
     private usersService: UserManagementService,
     private alertService: AlertsService,
     private policyService: PolicyManagementService
   ) {}
 
   ngOnInit(): void {
+    this.updateForm = new FormGroup({
+      organisation: new FormControl('', Validators.required),
+      department: new FormControl('', Validators.required),
+      designation: new FormControl('', Validators.required),
+    });
     this.getRequesterDetails();
-    this.getAllDatasets();
   }
 
-  applyFilter(event: Event) {
+  applyFilter(event: Event, type: string) {
     const filterValue = (event.target as HTMLInputElement).value;
-    this.dataSource.filter = filterValue.trim().toLowerCase();
+    if (type === 'other') {
+      this.otherDatasets.filter = filterValue.trim().toLowerCase();
+    } else {
+      this.dataSource.filter = filterValue.trim().toLowerCase();
+    }
+  }
+
+  // Toggle relevant sections based on user actions
+  updateView(section: string) {
+    if (section === 'profile') {
+      this.isProfile = true;
+      this.isAllowedData = false;
+      this.isOtherData = false;
+    } else if (section === 'alloweddata') {
+      this.isProfile = false;
+      this.isOtherData = false;
+      this.isAllowedData = true;
+      if (!this.dataSource) {
+        this.getApprovedDatasets();
+      }
+    } else if (section === 'alldata') {
+      this.isProfile = false;
+      this.isAllowedData = false;
+      this.isOtherData = true;
+      if (!this.otherDatasets) {
+        this.getOtherDatasets();
+      }
+    }
+  }
+
+  onUpdateButtonClick() {
+    this.displayForm = true;
+    this.showCancelBtn = true;
+  }
+
+  onCancelButtonClick() {
+    this.displayForm = false;
+    this.showCancelBtn = false;
   }
 
   async getRequesterDetails() {
@@ -67,12 +116,6 @@ export class DataRequesterComponent implements OnInit {
       let requester: DataRequester =
         await this.usersService.getRequesterDetails();
       this.dataRequester = requester;
-      this.dataRequester.approved = true;
-      if (this.dataRequester.approved) {
-        console.log('Requester is approved');
-      } else {
-        console.log('Requster is not approved');
-      }
     } catch (error: any) {
       console.log(error);
       this.alertService.alertErrorMessage(
@@ -81,8 +124,13 @@ export class DataRequesterComponent implements OnInit {
     }
   }
 
-  async getAllDatasets() {
-    let datasets = await this.connectService.getAllDatasets();
+  async getOtherDatasets() {
+    let datasets = await this.dataService.filteredDatasets();
+    this.otherDatasets = new MatTableDataSource(datasets);
+  }
+
+  async getApprovedDatasets() {
+    let datasets = await this.dataService.filtertedApprovedDatasets();
     this.dataSource = new MatTableDataSource(datasets);
   }
 
@@ -90,24 +138,44 @@ export class DataRequesterComponent implements OnInit {
     try {
       let stringifiedPolicies = this.genericService.bytesToString(policy);
       let policiesInJSONFormat = JSON.parse(stringifiedPolicies);
+
+      // Checking all any case
+      let orgname = policiesInJSONFormat[0]['organisation']['name'];
+      let depname =
+        policiesInJSONFormat[0]['organisation']['departments'][0]['name'];
+      let designation =
+        policiesInJSONFormat[0]['organisation']['departments'][0][
+          'designations'
+        ][0];
+      if (orgname === 'any' && depname === 'any' && designation === 'any') {
+        return true;
+      }
       let matchedOrganisation = policiesInJSONFormat.find(
         (policy: any) =>
           policy.organisation.name.toLowerCase() ===
-          this.dataRequester.organisation.toLowerCase()
+            this.dataRequester.organisation.toLowerCase() ||
+          policy.organisation.name.toLowerCase() === 'any'
       );
+
       if (!matchedOrganisation) {
         return false;
       }
+
       let { departments } = matchedOrganisation['organisation'];
       let matchedDepartment = departments.find(
         (dep: any) =>
-          dep.name.toLowerCase() === this.dataRequester.department.toLowerCase()
+          dep.name.toLowerCase() ===
+            this.dataRequester.department.toLowerCase() ||
+          dep.name.toLowerCase() === 'any'
       );
+
       if (!matchedDepartment) {
         return false;
       }
       let { designations } = matchedDepartment;
-      let isValidRole = designations.includes(this.dataRequester.designation);
+      let isValidRole =
+        designations.includes(this.dataRequester.designation) ||
+        designations.includes('any');
       if (isValidRole) {
         return true;
       }
@@ -130,23 +198,63 @@ export class DataRequesterComponent implements OnInit {
         return;
       }
       if (isPolicyMatched) {
-        console.log('dfgh');
         // let index = this.dataSource.filteredData.inde
+        let dataowner = await this.dataService.getDatasetOwner(
+          dataRowItem.dataid
+        );
         this.policyMatch = true;
-        let txn = await this.connectService.submitKeyRequest(
+        await this.dataService.submitKeyRequest(
           dataRowItem.dataid,
-          '0x69632Dd67F25DaBEf66050504eb153d81Cc39143',
+          dataowner,
           'policy match'
         );
       }
-    } catch (error) {
+    } catch (error: any) {
       console.log(error);
+      this.alertService.alertErrorMessage(error.message);
     }
+  }
+
+  async onSubmit() {
+    try {
+      this.isLoading = true;
+      let { organisation, department, designation } = this.updateForm.value;
+      if (!organisation || !department || !designation) return;
+      organisation = this.genericService.stringToBytes(
+        organisation.toLowerCase()
+      );
+      department = this.genericService.stringToBytes(department.toLowerCase());
+      designation = this.genericService.stringToBytes(
+        designation.toLowerCase()
+      );
+      let connecteduser = await this.genericService.getConnectedUser();
+      let txnConfirmation = await this.usersService.updateDataRequester(
+        connecteduser,
+        organisation,
+        department,
+        designation
+      );
+      if (txnConfirmation && txnConfirmation.confirmations === 1) {
+        this.isLoading = false;
+        this.resetForms();
+        this.displayForm = false;
+        this.getRequesterDetails();
+        this.alertService.alertSuccessMessage('Request submitted successfully');
+      }
+    } catch (error: any) {
+      console.log(error);
+      this.isLoading = false;
+      this.alertService.alertSuccessMessage(error.data.message);
+    }
+  }
+
+  resetForms() {
+    this.updateForm.reset();
   }
 
   async decrypt(element: any) {
     try {
-      let txn = await this.connectService.getDecryptionkey();
+      this.selectedDataset = await this.dataService.decryptData(element);
     } catch (error) {}
   }
 }

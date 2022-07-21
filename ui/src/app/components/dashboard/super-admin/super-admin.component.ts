@@ -1,10 +1,10 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
-import { MatTable, MatTableDataSource } from '@angular/material/table';
-import { ConnectService } from '../../../services/connect.service';
-import { GenericService } from 'src/app/services/generic.service';
-import { UserManagementService } from 'src/app/services/user-management.service';
-import { AlertsService } from 'src/app/services/alerts.service';
-import { OrganisationsManagementService } from 'src/app/services/organisations-management.service';
+import { Component, OnInit, ViewChild } from "@angular/core";
+import { MatTable, MatTableDataSource } from "@angular/material/table";
+import { FormGroup, Validators, FormControl } from "@angular/forms";
+import { GenericService } from "src/app/services/generic.service";
+import { UserManagementService } from "src/app/services/user-management.service";
+import { AlertsService } from "src/app/services/alerts.service";
+import { OrganisationsManagementService } from "src/app/services/organisations-management.service";
 
 export interface UserRequests {
   userAddress: string;
@@ -13,19 +13,20 @@ export interface UserRequests {
 }
 
 @Component({
-  selector: 'app-super-admin',
-  templateUrl: './super-admin.component.html',
-  styleUrls: ['./super-admin.component.css'],
+  selector: "app-super-admin",
+  templateUrl: "./super-admin.component.html",
+  styleUrls: ["./super-admin.component.css"],
 })
 export class SuperAdminComponent implements OnInit {
   isLoading: boolean = false;
   isAttributeLoading: boolean = false;
-  displayedColumns: string[] = ['address', 'type', 'status', 'actions'];
+  displayedColumns: string[] = ["address", "type", "status", "actions"];
   dataSource: any;
   superAdmin: string;
   isProfile: boolean = true;
   isRequests: boolean = false;
   isRevoke: boolean = false;
+  categoryForm: FormGroup;
   userWaitingForApproval: any = {
     userType: 0,
   };
@@ -33,7 +34,6 @@ export class SuperAdminComponent implements OnInit {
   @ViewChild(MatTable) table: MatTable<UserRequests>;
 
   constructor(
-    private connectService: ConnectService,
     private genericService: GenericService,
     private usersService: UserManagementService,
     private alertService: AlertsService,
@@ -42,21 +42,28 @@ export class SuperAdminComponent implements OnInit {
 
   ngOnInit(): void {
     this.getSuperAdmin();
+    this.categoryForm = new FormGroup({
+      category: new FormControl("", Validators.required),
+    });
+  }
+
+  resetForm() {
+    this.categoryForm.reset();
   }
 
   updateView(section: string) {
-    if (section === 'profile') {
+    if (section === "profile") {
       this.isProfile = true;
       this.isRevoke = false;
       this.isRequests = false;
-    } else if (section === 'requests') {
+    } else if (section === "requests") {
       this.isProfile = false;
       this.isRevoke = false;
       this.isRequests = true;
       if (!this.dataSource) {
         this.getUserApprovalRequests();
       }
-    } else if (section === 'revoke') {
+    } else if (section === "revoke") {
       this.isProfile = false;
       this.isRequests = false;
       this.isRevoke = true;
@@ -127,10 +134,14 @@ export class SuperAdminComponent implements OnInit {
           isOrgPresent.orgid
         );
       let { departmentids } = returnedOrganisation;
-      let returnedDepartments = departmentids.map(async (depid: string) => {
-        let department = await this.orgService.getDepartmentDetails(depid);
-        return department;
-      });
+
+      let returnedDepartments: any = [];
+      for (let i = 0; i < departmentids.length; i++) {
+        let department = await this.orgService.getDepartmentDetails(
+          departmentids[i]
+        );
+        returnedDepartments.push(department);
+      }
       let isDepFound = returnedDepartments.find(
         (department: any) =>
           department.depname.toLowerCase() === user.department.toLowerCase()
@@ -140,11 +151,11 @@ export class SuperAdminComponent implements OnInit {
           await this.orgService.addDesignationToDepartment(
             isDepFound.depid,
             designation,
-            isToAddDesignation
+            !isToAddDesignation
           );
         if (roleaddconfirmation.confirmations === 1) {
           this.alertService.alertSuccessMessage(
-            'Organisations updated successfully'
+            "Organisations updated successfully"
           );
         }
       } else {
@@ -152,11 +163,11 @@ export class SuperAdminComponent implements OnInit {
           isOrgPresent.orgid,
           department,
           designation,
-          isToAddDesignation
+          !isToAddDesignation
         );
         if (depaddconfirmation.confirmations === 1) {
           this.alertService.alertSuccessMessage(
-            'Organisations updated successfully'
+            "Organisations updated successfully"
           );
         }
       }
@@ -165,13 +176,37 @@ export class SuperAdminComponent implements OnInit {
         organisation,
         department,
         designation,
-        isToAddDesignation
+        !isToAddDesignation
       );
       if (orgaddconfirmation.confirmations === 1) {
         this.alertService.alertSuccessMessage(
-          'Organisations updated successfully'
+          "Organisations updated successfully"
         );
       }
+    }
+  }
+
+  async addCategory() {
+    try {
+      this.isLoading = true;
+      let { category } = this.categoryForm.value;
+      if (!category) {
+        return;
+      }
+      category = this.genericService.stringToBytes(category.toLowerCase());
+      let txnconfirmation = await this.usersService.addCategory(category);
+      if (txnconfirmation.confirmations === 1) {
+        this.isLoading = false;
+        this.resetForm();
+        this.alertService.alertSuccessMessage("Category added successfully");
+      }
+    } catch (error) {
+      console.log(error);
+      this.isLoading = false;
+      this.resetForm();
+      this.alertService.alertErrorMessage(
+        "Soemthing went wrong. Please try after sometime."
+      );
     }
   }
 
@@ -190,7 +225,7 @@ export class SuperAdminComponent implements OnInit {
           JSON.stringify({ userType: 0 })
         );
         this.getUserApprovalRequests();
-        this.alertService.alertSuccessMessage('User approved successfully');
+        this.alertService.alertSuccessMessage("User approved successfully");
       }
     } catch (error) {
       console.log(error);
